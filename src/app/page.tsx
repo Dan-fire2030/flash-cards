@@ -19,17 +19,24 @@ export default function Home() {
   }, []);
 
   const loadStats = async () => {
-    const [cardsResult, categoriesResult, recentResult] = await Promise.all([
-      supabase.from('flashcards').select('*', { count: 'exact', head: true }),
-      supabase.from('categories').select('*', { count: 'exact', head: true }),
-      supabase.from('flashcards').select('*').order('created_at', { ascending: false }).limit(5)
-    ]);
+    try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
+      const [cardsResult, categoriesResult, recentResult] = await Promise.all([
+        supabase.from('flashcards').select('*', { count: 'exact', head: true }),
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+        supabase.from('flashcards').select('*').order('created_at', { ascending: false }).limit(5)
+      ]);
 
-    setStats({
-      totalCards: cardsResult.count || 0,
-      totalCategories: categoriesResult.count || 0,
-      recentCards: recentResult.data || []
-    });
+      setStats({
+        totalCards: cardsResult.count || 0,
+        totalCategories: categoriesResult.count || 0,
+        recentCards: recentResult.data || []
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
   };
 
   return (

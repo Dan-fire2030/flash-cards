@@ -21,6 +21,9 @@ export default function NewCategoryPage() {
 
   const loadCategories = async () => {
     try {
+      // Only run on client side
+      if (typeof window === 'undefined') return;
+      
       const { data, error } = await supabase
         .from('categories')
         .select('*')
