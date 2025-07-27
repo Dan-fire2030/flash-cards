@@ -17,6 +17,10 @@ export default function ImageUpload({ currentImageUrl, onImageUpload, onImageRem
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    
+    // Debug: Check if Supabase client is initialized
+    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set')
+    console.log('Supabase client:', supabase ? 'Initialized' : 'Not initialized')
 
     // Check file type
     if (!file.type.startsWith('image/')) {
