@@ -48,37 +48,37 @@ export default function MobileNav() {
             onClick={() => setIsOpen(false)}
           />
           {/* メニュー */}
-          <div className="absolute top-full right-0 mt-3 w-64 glass-card rounded-3xl shadow-2xl z-50 overflow-hidden animate-slideIn border border-white/20">
+          <div className="absolute top-full right-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl z-50 overflow-hidden animate-slideIn border border-gray-200 dark:border-gray-700">
             <nav className="py-3">
               <Link
                 href="/"
                 onClick={() => setIsOpen(false)}
-                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/20 rounded-2xl transition-all duration-300 group"
+                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
               >
                 <span className="font-semibold text-lg">ホーム</span>
               </Link>
               <Link
                 href="/categories"
                 onClick={() => setIsOpen(false)}
-                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/20 rounded-2xl transition-all duration-300 group"
+                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
               >
                 <span className="font-semibold text-lg">カテゴリ</span>
               </Link>
               <Link
                 href="/cards"
                 onClick={() => setIsOpen(false)}
-                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/20 rounded-2xl transition-all duration-300 group"
+                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
               >
                 <span className="font-semibold text-lg">カード一覧</span>
               </Link>
               <Link
                 href="/stats"
                 onClick={() => setIsOpen(false)}
-                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-white/20 rounded-2xl transition-all duration-300 group"
+                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
               >
                 <span className="font-semibold text-lg">統計</span>
               </Link>
-              <div className="px-6 py-4 mt-2 border-t border-white/10">
+              <div className="px-6 py-4 mt-2 border-t border-gray-200 dark:border-gray-700">
                 <Link
                   href="/study"
                   onClick={() => setIsOpen(false)}
