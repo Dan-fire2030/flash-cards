@@ -18,9 +18,12 @@ export default function ImageUpload({ currentImageUrl, onImageUpload, onImageRem
     const file = e.target.files?.[0]
     if (!file) return
     
-    // Debug: Check if Supabase client is initialized
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set')
-    console.log('Supabase client:', supabase ? 'Initialized' : 'Not initialized')
+    // Check if Supabase client is initialized
+    if (!supabase) {
+      alert('画像アップロード機能は現在利用できません。環境設定を確認してください。')
+      console.error('Supabase client is not initialized')
+      return
+    }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
