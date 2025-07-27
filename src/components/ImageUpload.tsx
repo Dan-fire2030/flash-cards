@@ -43,7 +43,17 @@ export default function ImageUpload({ currentImageUrl, onImageUpload, onImageRem
         .from('images')
         .upload(filePath, file)
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        // Check for common errors
+        if (uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
+          throw new Error('Storage bucket "images" not found. Please create it in Supabase dashboard. See SUPABASE_SETUP.md for instructions.')
+        } else if (uploadError.message?.includes('policy') || uploadError.message?.includes('permission')) {
+          throw new Error('Permission denied. Please check bucket policies in Supabase dashboard.')
+        } else if (uploadError.message?.includes('Invalid API key')) {
+          throw new Error('Invalid Supabase API key. Please check your environment variables.')
+        }
+        throw uploadError
+      }
 
       // Get public URL
       const { data } = supabase.storage
@@ -54,7 +64,9 @@ export default function ImageUpload({ currentImageUrl, onImageUpload, onImageRem
       onImageUpload(data.publicUrl)
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('画像のアップロードに失敗しました')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Error details:', errorMessage)
+      alert(`画像のアップロードに失敗しました: ${errorMessage}`)
     } finally {
       setUploading(false)
     }
