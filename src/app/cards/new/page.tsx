@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Category } from '@/types';
+import ImageUpload from '@/components/ImageUpload';
 import MainNavBar from '@/components/MainNavBar';
 import SubHeader from '@/components/Header';
 
@@ -13,6 +14,7 @@ export default function NewCardPage() {
   const [frontText, setFrontText] = useState('');
   const [backText, setBackText] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +50,7 @@ export default function NewCardPage() {
         .insert({
           front_text: frontText.trim(),
           back_text: backText.trim(),
+          back_image_url: backImageUrl,
           category_id: categoryId
         });
 
@@ -109,6 +112,16 @@ export default function NewCardPage() {
                     required
                   />
                   <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
+                </div>
+                
+                {/* 画像アップロード */}
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">画像を追加（任意）</p>
+                  <ImageUpload
+                    currentImageUrl={backImageUrl || undefined}
+                    onImageUpload={(url) => setBackImageUrl(url)}
+                    onImageRemove={() => setBackImageUrl(null)}
+                  />
                 </div>
               </div>
 

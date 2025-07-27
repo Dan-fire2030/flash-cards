@@ -378,9 +378,19 @@ export default function StudyPage() {
                   {showAnswer && (
                     <div className="animate-fadeIn">
                       <div className="w-16 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto mb-8"></div>
-                      <p className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed">
+                      <p className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
                         {currentCard.back_text}
                       </p>
+                      {currentCard.back_image_url && (
+                        <div className="mt-4">
+                          <img
+                            src={currentCard.back_image_url}
+                            alt="カードの画像"
+                            className="max-w-full mx-auto rounded-lg shadow-md object-contain"
+                            style={{ maxHeight: '300px' }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

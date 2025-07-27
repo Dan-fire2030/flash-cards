@@ -11,6 +11,7 @@ export interface Flashcard {
   id: string
   front_text: string
   back_text: string
+  back_image_url?: string
   category_id: string
   correct_count: number
   incorrect_count: number
@@ -22,6 +23,7 @@ export interface Flashcard {
 export interface CreateFlashcardData {
   front_text: string
   back_text: string
+  back_image_url?: string
   category_id: string
 }
 
