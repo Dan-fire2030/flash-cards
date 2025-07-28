@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { Category, Flashcard } from '@/types';
-import ImageUpload from '@/components/ImageUpload';
-import MainNavBar from '@/components/MainNavBar';
-import SubHeader from '@/components/Header';
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { Category, Flashcard } from "@/types";
+import ImageUpload from "@/components/ImageUpload";
+import MainNavBar from "@/components/MainNavBar";
+import SubHeader from "@/components/Header";
 
 export default function EditCardPage() {
   const router = useRouter();
   const params = useParams();
   const cardId = params.id as string;
-  
-  const [frontText, setFrontText] = useState('');
-  const [backText, setBackText] = useState('');
+
+  const [frontText, setFrontText] = useState("");
+  const [backText, setBackText] = useState("");
   const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCard, setLoadingCard] = useState(true);
@@ -30,27 +30,27 @@ export default function EditCardPage() {
   const loadCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
+        .from("categories")
+        .select("*")
+        .order("name");
 
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
-      console.error('Error loading categories:', error);
+      console.error("Error loading categories:", error);
     }
   };
 
   const loadCard = async () => {
     try {
       const { data, error } = await supabase
-        .from('flashcards')
-        .select('*')
-        .eq('id', cardId)
+        .from("flashcards")
+        .select("*")
+        .eq("id", cardId)
         .single();
 
       if (error) throw error;
-      
+
       if (data) {
         setFrontText(data.front_text);
         setBackText(data.back_text);
@@ -58,9 +58,9 @@ export default function EditCardPage() {
         setCategoryId(data.category_id);
       }
     } catch (error) {
-      console.error('Error loading card:', error);
-      alert('カードの読み込みに失敗しました');
-      router.push('/cards');
+      console.error("Error loading card:", error);
+      alert("カードの読み込みに失敗しました");
+      router.push("/cards");
     } finally {
       setLoadingCard(false);
     }
@@ -73,20 +73,20 @@ export default function EditCardPage() {
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('flashcards')
+        .from("flashcards")
         .update({
           front_text: frontText.trim(),
           back_text: backText.trim(),
           back_image_url: backImageUrl,
-          category_id: categoryId
+          category_id: categoryId,
         })
-        .eq('id', cardId);
+        .eq("id", cardId);
 
       if (error) throw error;
-      router.push('/cards');
+      router.push("/cards");
     } catch (error) {
-      console.error('Error updating card:', error);
-      alert('カードの更新に失敗しました');
+      console.error("Error updating card:", error);
+      alert("カードの更新に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -97,8 +97,18 @@ export default function EditCardPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full animate-pulse mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <svg
+              className="w-8 h-8 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
             </svg>
           </div>
           <p className="text-gray-500 dark:text-gray-400">読み込み中...</p>
@@ -114,16 +124,24 @@ export default function EditCardPage() {
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-fadeIn">
-          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
+          >
             <div className="px-6 py-5 bg-gradient-to-r from-indigo-500 to-purple-500">
-              <h2 className="text-xl font-semibold text-white">カード情報を編集</h2>
+              <h2 className="text-xl font-semibold text-white">
+                カード情報を編集
+              </h2>
             </div>
-            
+
             <div className="p-8 space-y-8">
               {/* 表面 */}
               <div>
-                <label htmlFor="front" className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  表面（学習単語）
+                <label
+                  htmlFor="front"
+                  className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                >
+                  表面（学習単語/問題文）
                 </label>
                 <div className="relative">
                   <input
@@ -141,7 +159,10 @@ export default function EditCardPage() {
 
               {/* 裏面 */}
               <div>
-                <label htmlFor="back" className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <label
+                  htmlFor="back"
+                  className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                >
                   裏面（説明）
                 </label>
                 <div className="relative">
@@ -156,10 +177,12 @@ export default function EditCardPage() {
                   />
                   <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
                 </div>
-                
+
                 {/* 画像アップロード */}
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">画像を追加（任意）</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    画像を追加（任意）
+                  </p>
                   <ImageUpload
                     currentImageUrl={backImageUrl || undefined}
                     onImageUpload={(url) => setBackImageUrl(url)}
@@ -170,7 +193,10 @@ export default function EditCardPage() {
 
               {/* カテゴリ */}
               <div>
-                <label htmlFor="category" className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <label
+                  htmlFor="category"
+                  className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                >
                   カテゴリ
                 </label>
                 <div className="relative">
@@ -182,14 +208,24 @@ export default function EditCardPage() {
                     required
                   >
                     <option value="">カテゴリを選択してください</option>
-                    {categories.map(cat => (
+                    {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
                     ))}
                   </select>
-                  <svg className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                   <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
                 </div>
@@ -208,18 +244,33 @@ export default function EditCardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !frontText.trim() || !backText.trim() || !categoryId}
+                  disabled={
+                    loading ||
+                    !frontText.trim() ||
+                    !backText.trim() ||
+                    !categoryId
+                  }
                   className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      <svg
+                        className="w-4 h-4 animate-spin"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
                       </svg>
                       <span>更新中...</span>
                     </div>
                   ) : (
-                    '更新'
+                    "更新"
                   )}
                 </button>
               </div>

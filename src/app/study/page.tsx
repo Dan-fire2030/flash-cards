@@ -15,6 +15,7 @@ export default function StudyPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [includeChildren, setIncludeChildren] = useState(false);
   const [studyStats, setStudyStats] = useState({
     correct: 0,
     incorrect: 0,
@@ -31,7 +32,7 @@ export default function StudyPage() {
     if (selectedCategory) {
       loadCards();
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, includeChildren]);
 
   const loadCategories = async () => {
     try {
@@ -91,6 +92,19 @@ export default function StudyPage() {
     }
   };
 
+  const getAllCategoryIds = (categoryId: string): string[] => {
+    const ids = [categoryId];
+    const findChildren = (parentId: string) => {
+      const children = categories.filter(cat => cat.parent_id === parentId);
+      children.forEach(child => {
+        ids.push(child.id);
+        findChildren(child.id);
+      });
+    };
+    findChildren(categoryId);
+    return ids;
+  };
+
   const loadCards = async () => {
     setLoading(true);
     try {
@@ -98,7 +112,12 @@ export default function StudyPage() {
       
       // 「all」が選択されていない場合は特定のカテゴリでフィルター
       if (selectedCategory !== 'all') {
-        query = query.eq('category_id', selectedCategory);
+        if (includeChildren) {
+          const categoryIds = getAllCategoryIds(selectedCategory);
+          query = query.in('category_id', categoryIds);
+        } else {
+          query = query.eq('category_id', selectedCategory);
+        }
       }
       
       const { data, error } = await query;
@@ -230,7 +249,9 @@ export default function StudyPage() {
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">学習モード</h1>
                 {selectedCategory && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {selectedCategory === 'all' ? '🎲 全カテゴリからランダム' : categories.find(c => c.id === selectedCategory)?.name}
+                    {selectedCategory === 'all' 
+                      ? '🎲 全カテゴリからランダム' 
+                      : `${categories.find(c => c.id === selectedCategory)?.name}${includeChildren && selectedCategory !== 'all' ? ' (子カテゴリ含む)' : ''}`}
                   </p>
                 )}
               </div>
@@ -294,29 +315,54 @@ export default function StudyPage() {
                     <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
                   </div>
                   
+                  {/* 出題範囲オプション */}
+                  <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 mb-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeChildren}
+                        onChange={(e) => setIncludeChildren(e.target.checked)}
+                        className="w-5 h-5 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          子カテゴリを含める
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          選択したカテゴリの下位カテゴリも含めて出題します
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
                   {/* 個別カテゴリ */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {categories.map(cat => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className="group p-6 bg-gray-50 dark:bg-gray-700/50 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 dark:hover:from-indigo-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-300 text-left"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                              {cat.name}
-                            </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              ランダム順で出題
-                            </p>
+                    {categories.map(cat => {
+                      const childCount = includeChildren ? getAllCategoryIds(cat.id).length - 1 : 0;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className="group p-6 bg-gray-50 dark:bg-gray-700/50 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-50 dark:hover:from-indigo-900/20 dark:hover:to-purple-900/20 rounded-xl transition-all duration-300 text-left"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                {cat.name}
+                              </h3>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {includeChildren && childCount > 0 
+                                  ? `${childCount}個の子カテゴリを含む` 
+                                  : 'このカテゴリのみ'}
+                              </p>
+                            </div>
+                            <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
                           </div>
-                          <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

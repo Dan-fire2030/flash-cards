@@ -18,22 +18,38 @@ export default function EditCategoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCategory, setLoadingCategory] = useState(true);
+  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
 
   useEffect(() => {
     loadCategories();
     loadCategory();
   }, [categoryId]);
 
+  const getDescendantIds = (categoryId: string, allCategories: Category[]): string[] => {
+    const descendants: string[] = [categoryId];
+    const children = allCategories.filter(cat => cat.parent_id === categoryId);
+    
+    children.forEach(child => {
+      descendants.push(...getDescendantIds(child.id, allCategories));
+    });
+    
+    return descendants;
+  };
+
   const loadCategories = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: allData, error: allError } = await supabase
         .from('categories')
         .select('*')
-        .neq('id', categoryId) // 自分自身は除外
         .order('name');
 
-      if (error) throw error;
-      setCategories(data || []);
+      if (allError) throw allError;
+      
+      // 自分自身とその子孫を除外
+      const descendantIds = getDescendantIds(categoryId, allData || []);
+      const filteredCategories = (allData || []).filter(cat => !descendantIds.includes(cat.id));
+      
+      setCategories(filteredCategories);
     } catch (error) {
       console.error('Error loading categories:', error);
     }
@@ -52,6 +68,7 @@ export default function EditCategoryPage() {
       if (data) {
         setName(data.name);
         setParentId(data.parent_id || '');
+        setCurrentCategory(data);
       }
     } catch (error) {
       console.error('Error loading category:', error);
@@ -77,7 +94,7 @@ export default function EditCategoryPage() {
         .eq('id', categoryId);
 
       if (error) throw error;
-      router.push('/hierarchy');
+      router.push('/categories');
     } catch (error) {
       console.error('Error updating category:', error);
       alert('カテゴリの更新に失敗しました');

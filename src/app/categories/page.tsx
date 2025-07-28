@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Category } from '@/types';
-import CategoryTree from '@/components/CategoryTree';
 import MainNavBar from '@/components/MainNavBar';
 import SubHeader from '@/components/Header';
 
@@ -15,7 +14,9 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [cardCounts, setCardCounts] = useState<{ [key: string]: number }>({});
-  const [viewMode, setViewMode] = useState<'tree' | 'hierarchy'>('tree');
+  const [draggedCategory, setDraggedCategory] = useState<Category | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -150,18 +151,97 @@ export default function CategoriesPage() {
 
   const stats = getCategoryStats();
 
+  const handleDragStart = (e: React.DragEvent, category: Category) => {
+    setDraggedCategory(category);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, categoryId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverCategory(categoryId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverCategory(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetCategoryId: string | null) => {
+    e.preventDefault();
+    setDragOverCategory(null);
+
+    if (!draggedCategory || draggedCategory.id === targetCategoryId) return;
+
+    // 循環参照チェック
+    if (targetCategoryId) {
+      const isDescendant = (catId: string, parentId: string): boolean => {
+        const findChildren = (id: string): string[] => {
+          const children: string[] = [];
+          const addChildren = (parentId: string) => {
+            categories.forEach(cat => {
+              if (cat.parent_id === parentId) {
+                children.push(cat.id);
+                if (cat.children) {
+                  cat.children.forEach(child => addChildren(child.id));
+                }
+              }
+            });
+          };
+          addChildren(id);
+          return children;
+        };
+        
+        const descendants = findChildren(catId);
+        return descendants.includes(parentId);
+      };
+
+      if (isDescendant(draggedCategory.id, targetCategoryId)) {
+        alert('子カテゴリを親カテゴリに移動することはできません');
+        return;
+      }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ parent_id: targetCategoryId })
+        .eq('id', draggedCategory.id);
+
+      if (error) throw error;
+      
+      loadCategories();
+    } catch (error) {
+      console.error('Error updating category:', error);
+      alert('カテゴリの移動に失敗しました');
+    }
+  };
+
   const renderCategoryTree = (categories: Category[], level = 0) => {
     return categories.map(category => (
       <div key={category.id} className="animate-fadeIn">
         {/* カテゴリカード */}
         <div 
-          className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
+          className={`group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden ${
+            dragOverCategory === category.id ? 'ring-2 ring-purple-500' : ''
+          } ${editMode ? 'cursor-move' : ''}`}
           style={{ marginLeft: `${level * 24}px` }}
+          draggable={editMode}
+          onDragStart={editMode ? (e) => handleDragStart(e, category) : undefined}
+          onDragOver={editMode ? (e) => handleDragOver(e, category.id) : undefined}
+          onDragLeave={editMode ? handleDragLeave : undefined}
+          onDrop={editMode ? (e) => handleDrop(e, category.id) : undefined}
         >
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {level > 0 && (
+                {editMode && (
+                  <div className="flex items-center text-gray-400 dark:text-gray-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                    </svg>
+                  </div>
+                )}
+                {level > 0 && !editMode && (
                   <div className="flex items-center text-gray-400 dark:text-gray-600">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -173,15 +253,23 @@ export default function CategoriesPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                   </svg>
                 </div>
-                <div>
+                <div 
+                  className={`flex-1 ${!editMode ? 'cursor-pointer' : ''}`}
+                  onClick={!editMode ? () => handleCategoryClick(category) : undefined}
+                >
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                     {category.name}
                   </h3>
-                  {category.children && category.children.length > 0 && (
+                  <div className="flex items-center gap-4 mt-1">
+                    {category.children && category.children.length > 0 && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {category.children.length} 個のサブカテゴリ
+                      </p>
+                    )}
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {category.children.length} 個のサブカテゴリ
+                      {getTotalCardCount(category)} 枚のカード
                     </p>
-                  )}
+                  </div>
                 </div>
               </div>
               
@@ -272,34 +360,35 @@ export default function CategoriesPage() {
           </div>
         </div>
 
-        {/* ビューモード切替 */}
+        {/* 編集モード切替 */}
         <div className="mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">表示モード</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode('tree')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    viewMode === 'tree'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  管理ビュー
-                </button>
-                <button
-                  onClick={() => setViewMode('hierarchy')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    viewMode === 'hierarchy'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  階層ビュー
-                </button>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">カテゴリ管理</h2>
               </div>
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  editMode
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {editMode ? '編集完了' : '階層編集'}
+              </button>
             </div>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mt-3">
+              {editMode 
+                ? 'カテゴリをドラッグ&ドロップして階層を変更できます。子カテゴリを親カテゴリの上に移動することはできません。'
+                : 'カテゴリをクリックすると詳細が表示されます。階層編集ボタンでドラッグ&ドロップによる階層変更ができます。'
+              }
+            </p>
           </div>
         </div>
 
@@ -331,43 +420,35 @@ export default function CategoriesPage() {
               最初のカテゴリを作成
             </Link>
           </div>
-        ) : viewMode === 'tree' ? (
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">カテゴリ管理</h2>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
-                カテゴリをツリー構造で管理できます。ホバーすると編集・削除ボタンが表示されます。
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              {renderCategoryTree(categories)}
-            </div>
-          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* カテゴリツリー */}
+            {/* 統合カテゴリビュー */}
             <div className="lg:col-span-2">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">カテゴリ階層構造</h2>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  カテゴリをクリックすると詳細が表示されます。展開/折りたたみで階層を確認できます。
-                </p>
+              {/* ルートレベルドロップゾーン（編集モード時のみ表示） */}
+              {editMode && (
+                <div 
+                  className={`border-2 border-dashed rounded-xl p-4 mb-4 transition-colors ${
+                    dragOverCategory === 'root' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverCategory('root');
+                  }}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, null)}
+                >
+                  <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                    ここにドロップしてルートカテゴリにする
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {renderCategoryTree(categories)}
               </div>
-              <CategoryTree 
-                categories={categories} 
-                onCategoryClick={handleCategoryClick}
-              />
             </div>
 
-            {/* カテゴリ詳細 */}
+            {/* カテゴリ詳細サイドバー */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
                 {selectedCategory ? (
