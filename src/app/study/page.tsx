@@ -12,6 +12,8 @@ export default function StudyPage() {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [hasAnswered, setHasAnswered] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +131,8 @@ export default function StudyPage() {
       setCards(shuffled);
       setCurrentCardIndex(0);
       setShowAnswer(false);
+      setSelectedOption(null);
+      setHasAnswered(false);
       setStudyStats({
         correct: 0,
         incorrect: 0,
@@ -184,6 +188,8 @@ export default function StudyPage() {
       if (currentCardIndex < cards.length - 1) {
         setCurrentCardIndex(currentCardIndex + 1);
         setShowAnswer(false);
+      setSelectedOption(null);
+      setHasAnswered(false);
       } else {
         // 学習完了 - セッションを更新
         await finishStudySession(newStats);
@@ -228,6 +234,21 @@ export default function StudyPage() {
   };
 
   const currentCard = cards[currentCardIndex];
+
+  const handleMultipleChoiceAnswer = async (optionIndex: number) => {
+    if (hasAnswered) return;
+    
+    setSelectedOption(optionIndex);
+    setHasAnswered(true);
+    setShowAnswer(true);
+    
+    const isCorrect = optionIndex === currentCard?.correct_option_index;
+    
+    // 1秒後に自動的に次の問題へ
+    setTimeout(() => {
+      handleAnswer(isCorrect);
+    }, 1500);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -421,54 +442,109 @@ export default function StudyPage() {
                     {currentCard.front_text}
                   </h3>
                   
-                  {showAnswer && (
-                    <div className="animate-fadeIn">
-                      <div className="w-16 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto mb-8"></div>
-                      <p className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed mb-6 whitespace-pre-wrap">
-                        {currentCard.back_text}
-                      </p>
-                      {currentCard.back_image_url && (
-                        <div className="mt-4">
-                          <img
-                            src={currentCard.back_image_url}
-                            alt="カードの画像"
-                            className="max-w-full mx-auto rounded-lg shadow-md object-contain"
-                            style={{ maxHeight: '300px' }}
-                          />
-                        </div>
-                      )}
+                  {currentCard.card_type === 'multiple_choice' && currentCard.options ? (
+                    // ４択問題の表示
+                    <div className="space-y-3 max-w-md mx-auto">
+                      {currentCard.options.map((option, index) => {
+                        const isSelected = selectedOption === index;
+                        const isCorrect = index === currentCard.correct_option_index;
+                        const showResult = hasAnswered;
+                        
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => handleMultipleChoiceAnswer(index)}
+                            disabled={hasAnswered}
+                            className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
+                              showResult && isCorrect
+                                ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
+                                : showResult && isSelected && !isCorrect
+                                ? 'border-red-500 bg-red-50 dark:bg-red-900/30'
+                                : isSelected
+                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                                : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            } ${
+                              !hasAnswered && 'cursor-pointer hover:border-indigo-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className={`font-medium ${
+                                showResult && isCorrect
+                                  ? 'text-green-700 dark:text-green-300'
+                                  : showResult && isSelected && !isCorrect
+                                  ? 'text-red-700 dark:text-red-300'
+                                  : 'text-gray-900 dark:text-white'
+                              }`}>
+                                {String.fromCharCode(65 + index)}. {option}
+                              </span>
+                              {showResult && isCorrect && (
+                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                              {showResult && isSelected && !isCorrect && (
+                                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
+                  ) : (
+                    // 単語カードの表示
+                    showAnswer && (
+                      <div className="animate-fadeIn">
+                        <div className="w-16 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 mx-auto mb-8"></div>
+                        <p className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed mb-6 whitespace-pre-wrap">
+                          {currentCard.back_text}
+                        </p>
+                        {currentCard.back_image_url && (
+                          <div className="mt-4">
+                            <img
+                              src={currentCard.back_image_url}
+                              alt="カードの画像"
+                              className="max-w-full mx-auto rounded-lg shadow-md object-contain"
+                              style={{ maxHeight: '300px' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
                   )}
                 </div>
               </div>
             </div>
 
             {/* アクションボタン */}
-            <div className="flex justify-center gap-4 mt-8">
-              {!showAnswer ? (
-                <button
-                  onClick={() => setShowAnswer(true)}
-                  className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-                >
-                  答えを見る
-                </button>
-              ) : (
-                <>
+            {currentCard.card_type !== 'multiple_choice' && (
+              <div className="flex justify-center gap-4 mt-8">
+                {!showAnswer ? (
                   <button
-                    onClick={() => handleAnswer(false)}
-                    className="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                    onClick={() => setShowAnswer(true)}
+                    className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
                   >
-                    不正解
+                    答えを見る
                   </button>
-                  <button
-                    onClick={() => handleAnswer(true)}
-                    className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-                  >
-                    正解
-                  </button>
-                </>
-              )}
-            </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleAnswer(false)}
+                      className="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                    >
+                      不正解
+                    </button>
+                    <button
+                      onClick={() => handleAnswer(true)}
+                      className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                    >
+                      正解
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
       </main>

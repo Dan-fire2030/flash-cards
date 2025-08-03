@@ -18,6 +18,9 @@ export interface Flashcard {
   created_at: string
   updated_at: string
   category?: Category
+  card_type?: 'vocabulary' | 'multiple_choice'
+  options?: string[]
+  correct_option_index?: number
 }
 
 export interface CreateFlashcardData {
@@ -25,6 +28,9 @@ export interface CreateFlashcardData {
   back_text: string
   back_image_url?: string
   category_id: string
+  card_type?: 'vocabulary' | 'multiple_choice'
+  options?: string[]
+  correct_option_index?: number
 }
 
 export interface CreateCategoryData {

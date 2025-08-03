@@ -11,12 +11,17 @@ import SubHeader from "@/components/Header";
 
 export default function NewCardPage() {
   const router = useRouter();
+  const [cardType, setCardType] = useState<"vocabulary" | "multiple_choice">(
+    "vocabulary"
+  );
   const [frontText, setFrontText] = useState("");
   const [backText, setBackText] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [backImageUrl, setBackImageUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [options, setOptions] = useState<string[]>(["", "", "", ""]);
+  const [correctOptionIndex, setCorrectOptionIndex] = useState<number>(0);
 
   useEffect(() => {
     loadCategories();
@@ -41,16 +46,36 @@ export default function NewCardPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!frontText.trim() || !backText.trim() || !categoryId) return;
+
+    if (cardType === "vocabulary") {
+      if (!frontText.trim() || !backText.trim() || !categoryId) return;
+    } else {
+      if (!frontText.trim() || !categoryId) return;
+      const validOptions = options.filter((opt) => opt.trim());
+      if (validOptions.length !== 4) {
+        alert("４つの選択肢をすべて入力してください");
+        return;
+      }
+    }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("flashcards").insert({
+      const cardData: any = {
         front_text: frontText.trim(),
-        back_text: backText.trim(),
-        back_image_url: backImageUrl,
         category_id: categoryId,
-      });
+        card_type: cardType,
+      };
+
+      if (cardType === "vocabulary") {
+        cardData.back_text = backText.trim();
+        cardData.back_image_url = backImageUrl;
+      } else {
+        cardData.back_text = options[correctOptionIndex].trim();
+        cardData.options = options.map((opt) => opt.trim());
+        cardData.correct_option_index = correctOptionIndex;
+      }
+
+      const { error } = await supabase.from("flashcards").insert(cardData);
 
       if (error) throw error;
       router.push("/");
@@ -60,6 +85,12 @@ export default function NewCardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setOptions(newOptions);
   };
 
   return (
@@ -80,13 +111,74 @@ export default function NewCardPage() {
             </div>
 
             <div className="p-8 space-y-8">
+              {/* カードタイプ選択 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  カードタイプ
+                </label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setCardType("vocabulary")}
+                    className={`flex-1 px-4 py-3 rounded-xl border-2 transition-all ${
+                      cardType === "vocabulary"
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                        : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                        />
+                      </svg>
+                      <span className="font-medium">学習単語</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardType("multiple_choice")}
+                    className={`flex-1 px-4 py-3 rounded-xl border-2 transition-all ${
+                      cardType === "multiple_choice"
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                        : "border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                        />
+                      </svg>
+                      <span className="font-medium">４択問題文</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* 表面 */}
               <div>
                 <label
                   htmlFor="front"
                   className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
                 >
-                  表面（学習単語/問題文）
+                  {cardType === "vocabulary" ? "表面（学習単語）" : "問題文"}
                 </label>
                 <div className="relative">
                   <input
@@ -95,46 +187,91 @@ export default function NewCardPage() {
                     value={frontText}
                     onChange={(e) => setFrontText(e.target.value)}
                     className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors"
-                    placeholder="例: apple"
+                    placeholder={
+                      cardType === "vocabulary"
+                        ? "例: apple"
+                        : "例: 次のうち、りんごを意味する英単語はどれですか？"
+                    }
                     required
                   />
                   <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
                 </div>
               </div>
 
-              {/* 裏面 */}
-              <div>
-                <label
-                  htmlFor="back"
-                  className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
-                >
-                  裏面（説明）
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="back"
-                    value={backText}
-                    onChange={(e) => setBackText(e.target.value)}
-                    className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
-                    placeholder="例: りんご、果物の一種"
-                    rows={4}
-                    required
-                  />
-                  <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
-                </div>
+              {/* 裏面 (単語用) または 選択肢 (４択問題用) */}
+              {cardType === "vocabulary" ? (
+                <div>
+                  <label
+                    htmlFor="back"
+                    className="block text-sm font-semibold text-gray-900 dark:text-white mb-3"
+                  >
+                    裏面（説明）
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      id="back"
+                      value={backText}
+                      onChange={(e) => setBackText(e.target.value)}
+                      className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
+                      placeholder="例: りんご、果物の一種"
+                      rows={4}
+                      required
+                    />
+                    <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
+                  </div>
 
-                {/* 画像アップロード */}
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    画像を追加（任意）
+                  {/* 画像アップロード */}
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      画像を追加（任意）
+                    </p>
+                    <ImageUpload
+                      currentImageUrl={backImageUrl || undefined}
+                      onImageUpload={(url) => setBackImageUrl(url)}
+                      onImageRemove={() => setBackImageUrl(null)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                    選択肢（４つすべて入力してください）
+                  </label>
+                  <div className="space-y-3">
+                    {options.map((option, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="correctOption"
+                          checked={correctOptionIndex === index}
+                          onChange={() => setCorrectOptionIndex(index)}
+                          className="w-5 h-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) =>
+                              handleOptionChange(index, e.target.value)
+                            }
+                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors"
+                            placeholder={`選択肢 ${index + 1}`}
+                            required
+                          />
+                          {correctOptionIndex === index && (
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md font-medium">
+                              正解
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    ラジオボタンで正解の選択肢を選んでください
                   </p>
-                  <ImageUpload
-                    currentImageUrl={backImageUrl || undefined}
-                    onImageUpload={(url) => setBackImageUrl(url)}
-                    onImageRemove={() => setBackImageUrl(null)}
-                  />
                 </div>
-              </div>
+              )}
 
               {/* カテゴリ */}
               <div>
@@ -204,8 +341,10 @@ export default function NewCardPage() {
                   disabled={
                     loading ||
                     !frontText.trim() ||
-                    !backText.trim() ||
-                    !categoryId
+                    !categoryId ||
+                    (cardType === "vocabulary"
+                      ? !backText.trim()
+                      : options.some((opt) => !opt.trim()))
                   }
                   className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:shadow-lg transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
