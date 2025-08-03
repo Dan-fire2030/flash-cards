@@ -60,7 +60,15 @@ export default function NewCardPage() {
 
     setLoading(true);
     try {
-      const cardData: any = {
+      const cardData: {
+        front_text: string;
+        category_id: string;
+        card_type: 'vocabulary' | 'multiple_choice';
+        back_text?: string;
+        back_image_url?: string | null;
+        options?: string[];
+        correct_option_index?: number;
+      } = {
         front_text: frontText.trim(),
         category_id: categoryId,
         card_type: cardType,

@@ -9,11 +9,33 @@ import MainNavBar from '@/components/MainNavBar';
 import SubHeader from '@/components/Header';
 
 export default function CardsPage() {
-  const router = useRouter();
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [loading, setLoading] = useState(true);
+
+  const loadCards = async () => {
+    setLoading(true);
+    try {
+      let query = supabase.from('flashcards').select(`
+        *,
+        category:categories(name)
+      `);
+      
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setCards(data || []);
+    } catch (error) {
+      console.error('Error loading cards:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadCategories();
@@ -31,31 +53,6 @@ export default function CardsPage() {
       setCategories(data || []);
     } catch (error) {
       console.error('Error loading categories:', error);
-    }
-  };
-
-  const loadCards = async () => {
-    try {
-      let query = supabase
-        .from('flashcards')
-        .select(`
-          *,
-          category:categories(id, name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setCards(data || []);
-    } catch (error) {
-      console.error('Error loading cards:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

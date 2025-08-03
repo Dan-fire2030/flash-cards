@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Category, Flashcard } from "@/types";
+import { Category } from "@/types";
 import ImageUpload from "@/components/ImageUpload";
 import MainNavBar from "@/components/MainNavBar";
 import SubHeader from "@/components/Header";
@@ -24,25 +23,6 @@ export default function EditCardPage() {
   const [loadingCard, setLoadingCard] = useState(true);
   const [options, setOptions] = useState<string[]>(['', '', '', '']);
   const [correctOptionIndex, setCorrectOptionIndex] = useState<number>(0);
-
-  useEffect(() => {
-    loadCategories();
-    loadCard();
-  }, [cardId]);
-
-  const loadCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name");
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error) {
-      console.error("Error loading categories:", error);
-    }
-  };
 
   const loadCard = async () => {
     try {
@@ -74,6 +54,25 @@ export default function EditCardPage() {
     }
   };
 
+  useEffect(() => {
+    loadCategories();
+    loadCard();
+  }, [cardId]);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,7 +89,15 @@ export default function EditCardPage() {
 
     setLoading(true);
     try {
-      const updateData: any = {
+      const updateData: {
+        front_text: string;
+        category_id: string;
+        card_type: 'vocabulary' | 'multiple_choice';
+        back_text?: string;
+        back_image_url?: string | null;
+        options?: string[] | null;
+        correct_option_index?: number | null;
+      } = {
         front_text: frontText.trim(),
         category_id: categoryId,
         card_type: cardType,
