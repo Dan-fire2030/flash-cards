@@ -8,9 +8,11 @@ import { Category } from "@/types";
 import ImageUpload from "@/components/ImageUpload";
 import MainNavBar from "@/components/MainNavBar";
 import SubHeader from "@/components/Header";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NewCardPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [cardType, setCardType] = useState<"vocabulary" | "multiple_choice">(
     "vocabulary"
   );
@@ -68,10 +70,12 @@ export default function NewCardPage() {
         back_image_url?: string | null;
         options?: string[];
         correct_option_index?: number;
+        user_id?: string;
       } = {
         front_text: frontText.trim(),
         category_id: categoryId,
         card_type: cardType,
+        user_id: user?.id,
       };
 
       if (cardType === "vocabulary") {

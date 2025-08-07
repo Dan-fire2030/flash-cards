@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 interface SubHeaderProps {
   title?: string;
@@ -15,9 +17,22 @@ interface SubHeaderProps {
 
 export default function SubHeader({ title, showBackButton = false, actionButton }: SubHeaderProps) {
   const router = useRouter();
+  const { user, signOut } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const handleSignOut = async () => {
+    setLoading(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // タイトルもアクションボタンもない場合は何も表示しない
-  if (!title && !showBackButton && !actionButton) {
+  if (!title && !showBackButton && !actionButton && !user) {
     return null;
   }
 
@@ -40,14 +55,30 @@ export default function SubHeader({ title, showBackButton = false, actionButton 
             {title && <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>}
           </div>
           
-          {actionButton && (
-            <Link
-              href={actionButton.href}
-              className={actionButton.className || "px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all"}
-            >
-              {actionButton.text}
-            </Link>
-          )}
+          <div className="flex items-center gap-4">
+            {actionButton && (
+              <Link
+                href={actionButton.href}
+                className={actionButton.className || "px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all"}
+              >
+                {actionButton.text}
+              </Link>
+            )}
+            {user && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {user.email}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  disabled={loading}
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'ログアウト中...' : 'ログアウト'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
