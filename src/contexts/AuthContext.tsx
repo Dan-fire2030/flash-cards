@@ -57,18 +57,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    console.log('Attempting Google OAuth with Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+    try {
+      console.log('Starting Google OAuth...')
+      console.log('Origin:', window.location.origin)
+      console.log('Redirect URL:', `${window.location.origin}/auth/callback`)
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      })
+      
+      if (error) {
+        console.error('Google OAuth error:', error)
+        throw error
       }
-    })
-    if (error) {
-      console.error('Google OAuth error:', error)
-      throw error
+      
+      if (data?.url) {
+        console.log('Redirecting to:', data.url)
+        // 明示的にリダイレクトを実行
+        window.location.href = data.url
+      } else {
+        console.error('No OAuth URL received from Supabase')
+        throw new Error('OAuth URLが取得できませんでした')
+      }
+    } catch (err) {
+      console.error('SignInWithGoogle error:', err)
+      throw err
     }
-    console.log('OAuth redirect URL:', data?.url)
   }
 
   const signUp = async (email: string, password: string) => {
