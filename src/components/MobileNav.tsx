@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut, loading } = useAuth();
 
   return (
     <div className="md:hidden relative">
@@ -49,6 +51,47 @@ export default function MobileNav() {
           />
           {/* メニュー */}
           <div className="absolute top-full right-0 mt-3 w-64 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl z-50 overflow-hidden animate-slideIn border border-gray-200 dark:border-gray-700">
+            {/* ユーザー情報セクション */}
+            {!loading && (
+              <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700">
+                {user ? (
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      {user.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">ログイン中</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user.email}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">ゲストユーザー</span>
+                  </div>
+                )}
+                
+                {user ? (
+                  <button
+                    onClick={() => {
+                      signOut();
+                      setIsOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-sm bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-500/20 transition-colors duration-200 font-medium"
+                  >
+                    ログアウト
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="block w-full px-3 py-2 text-sm bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-colors duration-200 font-medium text-center"
+                  >
+                    ログイン
+                  </Link>
+                )}
+              </div>
+            )}
+            
             <nav className="py-3">
               <Link
                 href="/"

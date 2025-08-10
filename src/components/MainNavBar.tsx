@@ -29,9 +29,9 @@ export default function MainNavBar() {
               </span>
             </Link>
             
-            {/* ユーザー情報 */}
+            {/* ユーザー情報（デスクトップのみ） */}
             {!loading && (
-              <div className="hidden sm:flex items-center gap-3 pl-6 border-l border-gray-300 dark:border-gray-600">
+              <div className="hidden lg:flex items-center gap-3 pl-6 border-l border-gray-300 dark:border-gray-600">
                 {user ? (
                   <>
                     <div className="flex items-center gap-3">
