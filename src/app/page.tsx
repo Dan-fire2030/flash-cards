@@ -60,45 +60,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-mesh bg-gradient-to-br from-slate-50 via-purple-50 to-cyan-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-gray-800">
-      {/* ユーザー情報ヘッダー */}
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            {user ? (
-              <>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {user.email?.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">ログイン中</p>
-                    <p className="font-semibold text-gray-900 dark:text-white">{user.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={signOut}
-                  className="px-4 py-2 bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-500/20 transition-colors duration-200 font-medium text-sm"
-                >
-                  ログアウト
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="text-gray-600 dark:text-gray-400">
-                  <p className="text-sm">ゲストユーザー</p>
-                </div>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-colors duration-200 font-medium text-sm"
-                >
-                  ログイン
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-      
       <MainNavBar />
 
       {/* ヒーローセクション */}
