@@ -6,8 +6,10 @@ import { supabase } from "@/lib/supabase";
 import { Category, Flashcard } from "@/types";
 import PWAInstaller from "@/components/PWAInstaller";
 import MainNavBar from "@/components/MainNavBar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { user, signOut } = useAuth();
   const [stats, setStats] = useState({
     totalCards: 0,
     totalCategories: 0,
@@ -51,6 +53,27 @@ export default function Home() {
           <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{animationDelay: '4s'}}></div>
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* ユーザー情報セクション */}
+          {user && (
+            <div className="mb-8 glass-card rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 animate-slideDown">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {user.email?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">ログイン中</p>
+                  <p className="font-semibold text-gray-900 dark:text-white">{user.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={signOut}
+                className="px-4 py-2 bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-500/20 transition-colors duration-200 font-medium"
+              >
+                ログアウト
+              </button>
+            </div>
+          )}
+          
           <div className="text-center animate-slideUp">
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Link 
