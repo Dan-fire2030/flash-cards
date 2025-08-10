@@ -25,18 +25,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 現在のセッションをチェック
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email)
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session?.user?.email)
       setUser(session?.user ?? null)
       setLoading(false)
       
       if (event === 'SIGNED_IN') {
+        console.log('User signed in, redirecting to home...')
         router.push('/')
       } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out, redirecting to login...')
         router.push('/login')
       }
     })
