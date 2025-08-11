@@ -121,6 +121,13 @@ export default function MobileNav() {
               >
                 <span className="font-semibold text-lg">統計</span>
               </Link>
+              <Link
+                href="/settings"
+                onClick={() => setIsOpen(false)}
+                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
+              >
+                <span className="font-semibold text-lg">設定</span>
+              </Link>
               <div className="px-6 py-4 mt-2 border-t border-gray-200 dark:border-gray-700">
                 <Link
                   href="/study"

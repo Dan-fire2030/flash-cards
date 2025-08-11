@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DailyStats } from '@/types';
 import MainNavBar from '@/components/MainNavBar';
-import SubHeader from '@/components/Header';
 import {
   LineChart,
   Line,
@@ -93,9 +92,14 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <MainNavBar />
-      <SubHeader title="学習統計" showBackButton={true} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ページヘッダー */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">学習統計</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">あなたの学習進捗を視覚的に確認できます</p>
+        </div>
+
         {/* 期間選択 */}
         <div className="mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
