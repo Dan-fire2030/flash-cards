@@ -13,7 +13,7 @@ const firebaseConfig = {
 
 // 必須の環境変数をチェック
 const isFirebaseConfigured = () => {
-  return !!(
+  const configured = !!(
     firebaseConfig.apiKey &&
     firebaseConfig.authDomain &&
     firebaseConfig.projectId &&
@@ -21,6 +21,18 @@ const isFirebaseConfigured = () => {
     firebaseConfig.messagingSenderId &&
     firebaseConfig.appId
   );
+  
+  console.log('Firebase configuration check:', {
+    apiKey: !!firebaseConfig.apiKey,
+    authDomain: !!firebaseConfig.authDomain,
+    projectId: !!firebaseConfig.projectId,
+    storageBucket: !!firebaseConfig.storageBucket,
+    messagingSenderId: !!firebaseConfig.messagingSenderId,
+    appId: !!firebaseConfig.appId,
+    configured
+  });
+  
+  return configured;
 };
 
 // Firebase初期化
@@ -33,7 +45,12 @@ if (isFirebaseConfigured()) {
 
 // メッセージング関連の関数
 export const requestNotificationPermission = async (): Promise<string | null> => {
-  if (typeof window === 'undefined') return null;
+  console.log('Starting notification permission request...');
+  
+  if (typeof window === 'undefined') {
+    console.log('Not in browser environment');
+    return null;
+  }
   
   if (!app) {
     console.error('Firebase is not configured');
@@ -42,36 +59,53 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
   
   try {
     // Push通知がサポートされているかチェック
+    console.log('Checking FCM support...');
     const supported = await isSupported();
+    console.log('FCM supported:', supported);
+    
     if (!supported) {
       console.log('This browser does not support FCM');
       return null;
     }
 
+    // 現在の通知許可状態を確認
+    console.log('Current notification permission:', Notification.permission);
+
     // 通知許可をリクエスト
+    console.log('Requesting notification permission...');
     const permission = await Notification.requestPermission();
+    console.log('Permission result:', permission);
+    
     if (permission === 'granted') {
       const messaging = getMessaging(app);
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       
+      console.log('VAPID key available:', !!vapidKey);
       if (!vapidKey) {
-        console.error('VAPID key not found');
+        console.error('VAPID key not found in environment variables');
         return null;
       }
 
       // FCMトークンを取得
+      console.log('Getting FCM token...');
       const token = await getToken(messaging, {
         vapidKey: vapidKey,
       });
       
+      console.log('FCM Token obtained:', !!token);
       console.log('FCM Token:', token);
       return token;
     } else {
-      console.log('Notification permission denied');
+      console.log('Notification permission denied. Status:', permission);
       return null;
     }
   } catch (error) {
     console.error('Error getting FCM token:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     return null;
   }
 };

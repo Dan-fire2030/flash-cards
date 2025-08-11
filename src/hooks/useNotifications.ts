@@ -289,12 +289,76 @@ export function useNotifications() {
     }
   }, [saveFcmToken]);
 
-  // テスト通知を送信
-  const sendTestNotification = useCallback(async () => {
-    if (!fcmToken) return false;
+  // ブラウザネイティブのテスト通知を送信
+  const sendBrowserTestNotification = useCallback(async () => {
+    console.log('Sending browser test notification...');
+    
+    if (typeof window === 'undefined') {
+      console.error('Not in browser environment');
+      return false;
+    }
+
+    if (!('Notification' in window)) {
+      console.error('Notifications not supported');
+      return false;
+    }
+
+    if (Notification.permission !== 'granted') {
+      console.error('Notification permission not granted');
+      return false;
+    }
 
     try {
-      const { error } = await supabase.functions.invoke('send-notification', {
+      const notification = new Notification('テスト通知', {
+        body: 'プッシュ通知が正常に動作しています！',
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-96x96.png',
+        vibrate: [200, 100, 200],
+        tag: 'test-notification'
+      });
+
+      // 通知クリック時の処理
+      notification.onclick = () => {
+        console.log('Test notification clicked');
+        notification.close();
+        window.focus();
+      };
+
+      // 5秒後に自動で閉じる
+      setTimeout(() => {
+        notification.close();
+      }, 5000);
+
+      console.log('Browser test notification sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Error sending browser test notification:', error);
+      return false;
+    }
+  }, []);
+
+  // テスト通知を送信（FCMとブラウザネイティブの両方を試行）
+  const sendTestNotification = useCallback(async () => {
+    console.log('Starting test notification...');
+    
+    // まずブラウザネイティブ通知を試行
+    const browserSuccess = await sendBrowserTestNotification();
+    if (browserSuccess) {
+      console.log('Browser test notification successful');
+      return true;
+    }
+
+    // ブラウザネイティブが失敗した場合、FCMを試行
+    if (!fcmToken) {
+      console.error('No FCM token available for FCM test');
+      return false;
+    }
+
+    console.log('FCM Token:', fcmToken);
+
+    try {
+      console.log('Invoking send-notification function...');
+      const { data, error } = await supabase.functions.invoke('send-notification', {
         body: {
           fcm_token: fcmToken,
           title: 'テスト通知',
@@ -306,13 +370,30 @@ export function useNotifications() {
         }
       });
 
-      if (error) throw error;
+      console.log('Function response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+      
+      if (data && !data.success) {
+        console.error('Notification send failed:', data);
+        return false;
+      }
+
+      console.log('FCM test notification sent successfully');
       return true;
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      console.error('Error sending FCM test notification:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details
+      });
       return false;
     }
-  }, [fcmToken]);
+  }, [fcmToken, sendBrowserTestNotification]);
 
   // 初期化
   useEffect(() => {
