@@ -17,10 +17,21 @@ export default function CardsPage() {
   const loadCards = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('flashcards').select(`
-        *,
-        category:categories(name)
-      `);
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      let query = supabase
+        .from('flashcards')
+        .select(`
+          *,
+          category:categories(name)
+        `)
+        .eq('user_id', user.id);
       
       if (selectedCategory) {
         query = query.eq('category_id', selectedCategory);
@@ -44,9 +55,17 @@ export default function CardsPage() {
 
   const loadCategories = async () => {
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;

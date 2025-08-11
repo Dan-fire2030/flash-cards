@@ -13,6 +13,7 @@ export default function MainNavBar() {
     { href: '/categories', label: 'カテゴリ' },
     { href: '/cards', label: 'カード一覧' },
     { href: '/stats', label: '統計' },
+    { href: '/settings/notifications', label: '通知設定' },
   ];
 
   return (

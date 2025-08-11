@@ -34,9 +34,17 @@ export default function NewCardPage() {
       // Only run on client side
       if (typeof window === "undefined") return;
 
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from("categories")
         .select("*")
+        .eq('user_id', user.id)
         .order("name");
 
       if (error) throw error;
@@ -62,6 +70,14 @@ export default function NewCardPage() {
 
     setLoading(true);
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('ログインが必要です');
+        router.push('/login');
+        return;
+      }
+
       const cardData: {
         front_text: string;
         category_id: string;
@@ -70,12 +86,12 @@ export default function NewCardPage() {
         back_image_url?: string | null;
         options?: string[];
         correct_option_index?: number;
-        user_id?: string;
+        user_id: string;
       } = {
         front_text: frontText.trim(),
         category_id: categoryId,
         card_type: cardType,
-        user_id: user?.id,
+        user_id: user.id,
       };
 
       if (cardType === "vocabulary") {

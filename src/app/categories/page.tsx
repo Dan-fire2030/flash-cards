@@ -25,9 +25,18 @@ export default function CategoriesPage() {
 
   const loadCategories = async () => {
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -65,9 +74,17 @@ export default function CategoriesPage() {
 
   const loadCardCounts = async () => {
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('flashcards')
-        .select('category_id');
+        .select('category_id')
+        .eq('user_id', user.id);
 
       if (error) throw error;
 

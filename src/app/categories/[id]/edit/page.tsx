@@ -38,9 +38,17 @@ export default function EditCategoryPage() {
 
   const loadCategories = async () => {
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data: allData, error: allError } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (allError) throw allError;

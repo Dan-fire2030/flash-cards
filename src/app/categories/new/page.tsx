@@ -24,9 +24,17 @@ export default function NewCategoryPage() {
       // Only run on client side
       if (typeof window === 'undefined') return;
       
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
@@ -42,18 +50,27 @@ export default function NewCategoryPage() {
 
     setLoading(true);
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('ログインが必要です');
+        router.push('/login');
+        return;
+      }
+
       const { error } = await supabase
         .from('categories')
         .insert({
           name: name.trim(),
-          parent_id: parentId || null
+          parent_id: parentId || null,
+          user_id: user.id
         });
 
       if (error) throw error;
-      router.push('/');
+      router.push('/categories');
     } catch (error) {
       console.error('Error creating category:', error);
-      alert('カテゴリの作成に失敗しました');
+      alert('カテゴリの作成に失敗しました: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }

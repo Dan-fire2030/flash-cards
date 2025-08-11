@@ -36,6 +36,14 @@ export default function StatsPage() {
   const loadStats = async () => {
     setLoading(true);
     try {
+      // ユーザー情報を取得
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        setLoading(false);
+        return;
+      }
+
       const today = new Date();
       const daysToSubtract = selectedPeriod === '7days' ? 7 : selectedPeriod === '30days' ? 30 : 90;
       const startDate = new Date(today.getTime() - daysToSubtract * 24 * 60 * 60 * 1000);
@@ -43,6 +51,7 @@ export default function StatsPage() {
       const { data, error } = await supabase
         .from('study_sessions')
         .select('*')
+        .eq('user_id', user.id)
         .gte('date', startDate.toISOString().split('T')[0])
         .order('date', { ascending: true });
 
