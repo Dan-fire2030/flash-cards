@@ -6,73 +6,25 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Flashcard, Category } from '@/types';
 import MainNavBar from '@/components/MainNavBar';
+import { useOfflineCards } from '@/hooks/useOfflineCards';
+import { useOffline } from '@/contexts/OfflineContext';
 
 export default function CardsPage() {
-  const [cards, setCards] = useState<Flashcard[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [filteredCards, setFilteredCards] = useState<Flashcard[]>([]);
+  
+  // オフライン対応
+  const { isOnline } = useOffline();
+  const { cards, categories, loading, error } = useOfflineCards();
 
-  const loadCards = async () => {
-    setLoading(true);
-    try {
-      // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        setLoading(false);
-        return;
-      }
-
-      let query = supabase
-        .from('flashcards')
-        .select(`
-          *,
-          category:categories(name)
-        `)
-        .eq('user_id', user.id);
-      
-      if (selectedCategory) {
-        query = query.eq('category_id', selectedCategory);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setCards(data || []);
-    } catch (error) {
-      console.error('Error loading cards:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // カードのフィルタリング
   useEffect(() => {
-    loadCategories();
-    loadCards();
-  }, [selectedCategory]);
-
-  const loadCategories = async () => {
-    try {
-      // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error) {
-      console.error('Error loading categories:', error);
+    let filtered = cards;
+    if (selectedCategory) {
+      filtered = cards.filter(card => card.category_id === selectedCategory);
     }
-  };
+    setFilteredCards(filtered);
+  }, [cards, selectedCategory]);
 
   const deleteCard = async (id: string) => {
     if (!confirm('このカードを削除しますか？')) return;
@@ -140,7 +92,22 @@ export default function CardsPage() {
         </div>
 
         {/* カード一覧 */}
-        {loading ? (
+        {error ? (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-200 to-red-300 dark:from-red-800 dark:to-red-700 rounded-2xl flex items-center justify-center">
+              <svg className="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">データの読み込みに失敗しました</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
+            {!isOnline && (
+              <p className="text-sm text-orange-600 dark:text-orange-400 mb-4">
+                📱 オフラインモード - インターネット接続を確認してください
+              </p>
+            )}
+          </div>
+        ) : loading ? (
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full animate-pulse">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,7 +116,7 @@ export default function CardsPage() {
             </div>
             <p className="mt-4 text-gray-500 dark:text-gray-400">読み込み中...</p>
           </div>
-        ) : cards.length === 0 ? (
+        ) : filteredCards.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center">
               <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,17 +137,17 @@ export default function CardsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map(card => (
+            {filteredCards.map(card => (
               <div key={card.id} className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                 <div className="p-6">
                   {/* カテゴリバッジ */}
-                  {card.category && (
+                  {card.category_id && (
                     <div className="mb-4">
                       <span className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-full">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
-                        {card.category.name}
+                        {categories.find(cat => cat.id === card.category_id)?.name || 'カテゴリ'}
                       </span>
                     </div>
                   )}

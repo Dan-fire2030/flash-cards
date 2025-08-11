@@ -108,17 +108,42 @@ export function useOfflineCards() {
     setLoading(false);
   }, [isOnline, fetchFromAPI, loadFromCache]);
 
-  // 初回読み込み
+  // 初回読み込み - まずキャッシュから読み込んでから必要に応じてAPIから更新
   useEffect(() => {
-    loadData();
-  }, []);
+    const initialLoad = async () => {
+      setLoading(true);
+      setError(null);
 
-  // オンライン状態が変わったら再読み込み
+      // まずキャッシュから読み込み（即座に表示）
+      const cacheSuccess = loadFromCache();
+      
+      if (cacheSuccess) {
+        setLoading(false);
+        
+        // キャッシュがある場合でも、オンラインなら最新データを取得
+        if (isOnline) {
+          const apiSuccess = await fetchFromAPI();
+          if (!apiSuccess) {
+            // API取得に失敗してもキャッシュがあるのでエラーにしない
+            console.warn('API fetch failed, using cached data');
+          }
+        }
+      } else {
+        // キャッシュがない場合は通常の読み込み処理
+        await loadData();
+      }
+    };
+
+    initialLoad();
+  }, [isOnline, loadFromCache, fetchFromAPI]);
+
+  // オンライン状態が変わったら再読み込み（オンラインになった時のみ）
   useEffect(() => {
     if (isOnline && !loading) {
-      loadData();
+      // バックグラウンドで更新（UIはブロックしない）
+      fetchFromAPI().catch(console.error);
     }
-  }, [isOnline]);
+  }, [isOnline, loading, fetchFromAPI]);
 
   // キャッシュをクリアする関数
   const clearCache = useCallback(() => {

@@ -18,39 +18,8 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  useEffect(() => {
-    // 初期状態の設定
-    setIsOnline(navigator.onLine);
-
-    // オンライン/オフラインイベントのリスナー
-    const handleOnline = () => {
-      setIsOnline(true);
-      // オンライン復帰時に自動同期
-      forceSyncData();
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Service Workerの準備状態を確認
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(() => {
-        setIsOfflineReady(true);
-      });
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   const forceSyncData = useCallback(async () => {
-    if (!isOnline) return;
+    if (!navigator.onLine) return;
 
     setSyncStatus('syncing');
     try {
@@ -84,7 +53,38 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         setSyncStatus('idle');
       }, 3000);
     }
-  }, [isOnline]);
+  }, []);
+
+  useEffect(() => {
+    // 初期状態の設定
+    setIsOnline(navigator.onLine);
+
+    // オンライン/オフラインイベントのリスナー
+    const handleOnline = () => {
+      setIsOnline(true);
+      // オンライン復帰時に自動同期
+      forceSyncData();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Service Workerの準備状態を確認
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => {
+        setIsOfflineReady(true);
+      });
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [forceSyncData]);
 
   return (
     <OfflineContext.Provider

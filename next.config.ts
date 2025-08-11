@@ -58,10 +58,10 @@ const withPWA = require('next-pwa')({
     },
     // Supabase API calls caching
     {
-      urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/cards/i,
+      urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/flashcards/i,
       handler: 'NetworkFirst',
       options: {
-        cacheName: 'cards-api',
+        cacheName: 'flashcards-api',
         networkTimeoutSeconds: 10,
         expiration: {
           maxEntries: 200,

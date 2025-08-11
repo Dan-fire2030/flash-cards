@@ -6,51 +6,48 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Category } from '@/types';
 import MainNavBar from '@/components/MainNavBar';
+import { useOfflineCards } from '@/hooks/useOfflineCards';
+import { useOffline } from '@/contexts/OfflineContext';
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [cardCounts, setCardCounts] = useState<{ [key: string]: number }>({});
   const [draggedCategory, setDraggedCategory] = useState<Category | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  
+  // オフライン対応
+  const { isOnline } = useOffline();
+  const { cards, categories, loading, error } = useOfflineCards();
+  
+  // カード数の集計
+  const [cardCounts, setCardCounts] = useState<{ [key: string]: number }>({});
+
+  // カテゴリーの階層構造処理
+  const [hierarchicalCategories, setHierarchicalCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    loadCategories();
-    loadCardCounts();
-  }, []);
-
-  const loadCategories = async () => {
-    try {
-      // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        setLoading(false);
-        return;
+    // カード数を集計
+    const counts: { [key: string]: number } = {};
+    cards.forEach((card) => {
+      if (card.category_id) {
+        counts[card.category_id] = (counts[card.category_id] || 0) + 1;
       }
+    });
+    setCardCounts(counts);
 
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // ツリー構造に変換
+    // カテゴリーの階層構造を構築
+    if (categories.length > 0) {
       const categoriesMap = new Map<string, Category>();
       const rootCategories: Category[] = [];
 
       // まず全カテゴリをマップに追加
-      data?.forEach(cat => {
+      categories.forEach(cat => {
         categoriesMap.set(cat.id, { ...cat, children: [] });
       });
 
       // 親子関係を構築
-      data?.forEach(cat => {
+      categories.forEach(cat => {
         const category = categoriesMap.get(cat.id)!;
         if (cat.parent_id) {
           const parent = categoriesMap.get(cat.parent_id);
@@ -63,41 +60,9 @@ export default function CategoriesPage() {
         }
       });
 
-      setCategories(rootCategories);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-    } finally {
-      setLoading(false);
+      setHierarchicalCategories(rootCategories);
     }
-  };
-
-  const loadCardCounts = async () => {
-    try {
-      // ユーザー情報を取得
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('flashcards')
-        .select('category_id')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      const counts: { [key: string]: number } = {};
-      data?.forEach((card) => {
-        if (card.category_id) {
-          counts[card.category_id] = (counts[card.category_id] || 0) + 1;
-        }
-      });
-      setCardCounts(counts);
-    } catch (error) {
-      console.error('Error loading card counts:', error);
-    }
-  };
+  }, [cards, categories]);
 
   const deleteCategory = async (id: string) => {
     if (!confirm('このカテゴリを削除しますか？子カテゴリも削除されます。')) return;
@@ -157,9 +122,9 @@ export default function CategoriesPage() {
       return result;
     };
 
-    const allCategories = flattenCategories(categories);
+    const allCategories = flattenCategories(hierarchicalCategories);
     const totalCategories = allCategories.length;
-    const maxDepth = categories.length > 0 ? Math.max(...categories.map(cat => getCategoryDepth(cat) + 1)) : 0;
+    const maxDepth = hierarchicalCategories.length > 0 ? Math.max(...hierarchicalCategories.map(cat => getCategoryDepth(cat) + 1)) : 0;
     const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
 
     return { totalCategories, maxDepth, totalCards };
@@ -416,7 +381,22 @@ export default function CategoriesPage() {
           </div>
         </div>
 
-        {loading ? (
+        {error ? (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-red-200 to-red-300 dark:from-red-800 dark:to-red-700 rounded-2xl flex items-center justify-center">
+              <svg className="w-12 h-12 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">データの読み込みに失敗しました</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
+            {!isOnline && (
+              <p className="text-sm text-orange-600 dark:text-orange-400 mb-4">
+                📱 オフラインモード - インターネット接続を確認してください
+              </p>
+            )}
+          </div>
+        ) : loading ? (
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full animate-pulse mb-4">
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -425,7 +405,7 @@ export default function CategoriesPage() {
             </div>
             <p className="text-gray-500 dark:text-gray-400">読み込み中...</p>
           </div>
-        ) : categories.length === 0 ? (
+        ) : hierarchicalCategories.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center">
               <svg className="w-12 h-12 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,7 +448,7 @@ export default function CategoriesPage() {
               )}
               
               <div className="space-y-4">
-                {renderCategoryTree(categories)}
+                {renderCategoryTree(hierarchicalCategories)}
               </div>
             </div>
 

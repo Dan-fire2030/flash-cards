@@ -15,7 +15,7 @@ export async function POST() {
     // カードとカテゴリーのデータを同時に取得
     const [cardsResult, categoriesResult] = await Promise.all([
       supabase
-        .from('cards')
+        .from('flashcards')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
