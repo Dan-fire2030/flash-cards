@@ -171,50 +171,6 @@ export default function SecuritySettingsPage() {
             </div>
           </div>
 
-          {/* その他のセキュリティ設定 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              アカウントセキュリティ
-            </h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">自動ログアウト</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    一定時間非活動状態が続いた場合に自動でログアウト
-                  </p>
-                </div>
-                <button className="px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
-                  設定
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">パスワード変更</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    アカウントのパスワードを変更
-                  </p>
-                </div>
-                <button className="px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
-                  変更
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">アクティビティログ</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    最近のログイン履歴を確認
-                  </p>
-                </div>
-                <button className="px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
-                  表示
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
     </div>

@@ -102,9 +102,9 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
   } catch (error) {
     console.error('Error getting FCM token:', error);
     console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code
+      name: error instanceof Error ? error.name : 'Unknown name',
+      message: error instanceof Error ? error.message : 'Unknown message',
+      code: (error as { code?: string })?.code || 'Unknown code'
     });
     return null;
   }

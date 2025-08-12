@@ -63,7 +63,7 @@ export default function NotificationSettingsPage() {
       }
     } catch (error) {
       console.error('Test notification error:', error);
-      alert(`テスト通知でエラーが発生しました: ${error.message}`);
+      alert(`テスト通知でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -193,63 +193,6 @@ export default function NotificationSettingsPage() {
             </div>
           </div>
 
-          {/* デバッグ情報 */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl shadow-lg p-6 border border-yellow-200 dark:border-yellow-800">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">デバッグ情報</h2>
-            
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">通知許可状態:</span>
-                  <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                    permissionStatus === 'granted' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {permissionStatus}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">FCMトークン:</span>
-                  <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                    fcmToken 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
-                    {fcmToken ? '取得済み' : '未取得'}
-                  </span>
-                </div>
-              </div>
-              
-              {fcmToken && (
-                <div className="mt-3">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">FCMトークン (最初の50文字):</span>
-                  <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono break-all">
-                    {fcmToken.substring(0, 50)}...
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-4">
-                <button
-                  onClick={() => {
-                    console.log('=== Notification Debug Info ===');
-                    console.log('Permission Status:', permissionStatus);
-                    console.log('FCM Token:', fcmToken);
-                    console.log('Settings:', settings);
-                    console.log('Firebase Config Available:', !!(
-                      process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-                      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-                    ));
-                    alert('デバッグ情報をコンソールに出力しました');
-                  }}
-                  className="px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
-                >
-                  デバッグ情報をコンソール出力
-                </button>
-              </div>
-            </div>
-          </div>
 
           {/* 学習リマインダー設定 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">

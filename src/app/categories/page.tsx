@@ -18,7 +18,7 @@ export default function CategoriesPage() {
   
   // オフライン対応
   const { isOnline } = useOffline();
-  const { cards, categories, loading, error } = useOfflineCards();
+  const { cards, categories, loading, error, refetch } = useOfflineCards();
   
   // カード数の集計
   const [cardCounts, setCardCounts] = useState<{ [key: string]: number }>({});
@@ -75,8 +75,7 @@ export default function CategoriesPage() {
 
       if (error) throw error;
       setSelectedCategory(null);
-      loadCategories();
-      loadCardCounts();
+      refetch();
     } catch (error) {
       console.error('Error deleting category:', error);
       alert('カテゴリの削除に失敗しました');
@@ -190,7 +189,7 @@ export default function CategoriesPage() {
 
       if (error) throw error;
       
-      loadCategories();
+      refetch();
     } catch (error) {
       console.error('Error updating category:', error);
       alert('カテゴリの移動に失敗しました');

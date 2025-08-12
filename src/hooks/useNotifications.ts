@@ -313,7 +313,6 @@ export function useNotifications() {
         body: 'プッシュ通知が正常に動作しています！',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-96x96.png',
-        vibrate: [200, 100, 200],
         tag: 'test-notification'
       });
 
@@ -387,9 +386,9 @@ export function useNotifications() {
     } catch (error) {
       console.error('Error sending FCM test notification:', error);
       console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details
+        message: error instanceof Error ? error.message : 'Unknown message',
+        code: (error as { code?: string })?.code || 'Unknown code',
+        details: (error as { details?: string })?.details || 'Unknown details'
       });
       return false;
     }

@@ -15,7 +15,7 @@ export default function CardsPage() {
   
   // オフライン対応
   const { isOnline } = useOffline();
-  const { cards, categories, loading, error } = useOfflineCards();
+  const { cards, categories, loading, error, refetch } = useOfflineCards();
 
   // カードのフィルタリング
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function CardsPage() {
         .eq('id', id);
 
       if (error) throw error;
-      loadCards();
+      refetch();
     } catch (error) {
       console.error('Error deleting card:', error);
     }
