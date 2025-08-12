@@ -73,6 +73,16 @@ export default function OfflineStudyPage() {
     setIsAllCategoriesSelected(false);
   };
 
+  // Fisher-Yates (Knuth) シャッフルアルゴリズム
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const startStudySession = async () => {
     // オフライン時はセッション記録をスキップ
     if (!isOnline) {
@@ -206,7 +216,7 @@ export default function OfflineStudyPage() {
         }
       }
 
-      const shuffled = [...filteredCards].sort(() => Math.random() - 0.5);
+      const shuffled = shuffleArray(filteredCards);
       setCards(shuffled);
       setCurrentCardIndex(0);
       setShowAnswer(false);
@@ -507,7 +517,7 @@ export default function OfflineStudyPage() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900 dark:text-white">全てのカテゴリ</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">全範囲から出題</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">全範囲からランダムに出題</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
