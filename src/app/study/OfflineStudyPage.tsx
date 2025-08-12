@@ -390,11 +390,23 @@ export default function OfflineStudyPage() {
     return (
       <div className="space-y-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 min-h-[300px] flex items-center justify-center">
-          <div className="text-center">
+          <div className="text-center w-full">
             <h3 className="text-3xl font-bold mb-4">{currentCard?.front_text}</h3>
             {showAnswer && (
-              <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-                <p className="text-xl">{currentCard?.back_text}</p>
+              <div className="mt-8 space-y-4">
+                <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded">
+                  <p className="text-xl">{currentCard?.back_text}</p>
+                </div>
+                {currentCard?.back_image_url && (
+                  <div className="mt-4">
+                    <img 
+                      src={currentCard.back_image_url} 
+                      alt="Card image" 
+                      className="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                      style={{ maxHeight: '300px' }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -405,7 +417,8 @@ export default function OfflineStudyPage() {
             onClick={() => setShowAnswer(true)}
             className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            答えを見る (スペースキー)
+            <span className="inline sm:hidden">答えを見る</span>
+            <span className="hidden sm:inline">答えを見る (スペースキー)</span>
           </button>
         )}
 
@@ -418,7 +431,8 @@ export default function OfflineStudyPage() {
               }}
               className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              ◯ 正解 (O)
+              <span className="inline sm:hidden">◯ 正解</span>
+              <span className="hidden sm:inline">◯ 正解 (O)</span>
             </button>
             <button
               onClick={() => {
@@ -427,7 +441,8 @@ export default function OfflineStudyPage() {
               }}
               className="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
-              × 不正解 (X)
+              <span className="inline sm:hidden">× 不正解</span>
+              <span className="hidden sm:inline">× 不正解 (X)</span>
             </button>
           </div>
         )}
