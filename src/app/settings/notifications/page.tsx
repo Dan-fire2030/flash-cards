@@ -154,14 +154,14 @@ export default function NotificationSettingsPage() {
         <div className="space-y-8">
           
           {/* 通知許可状態 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">通知許可設定</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">通知許可設定</h2>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">通知許可状態</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex-1">
+                  <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">通知許可状態</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     {permissionStatus === 'granted' ? '許可済み' : 
                      permissionStatus === 'denied' ? '拒否' : '未設定'}
                   </p>
@@ -169,7 +169,7 @@ export default function NotificationSettingsPage() {
                 {permissionStatus !== 'granted' && (
                   <button
                     onClick={handlePermissionRequest}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base"
                   >
                     通知を許可
                   </button>
@@ -195,14 +195,14 @@ export default function NotificationSettingsPage() {
 
 
           {/* 学習リマインダー設定 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">学習リマインダー</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">学習リマインダー</h2>
             
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">学習リマインダーを有効にする</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">設定した時間に学習を促す通知を送信</p>
+                <div className="flex-1">
+                  <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">学習リマインダーを有効にする</p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">設定した時間に学習を促す通知を送信</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -279,8 +279,8 @@ export default function NotificationSettingsPage() {
           </div>
 
           {/* 目標設定通知 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">目標達成通知</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">目標達成通知</h2>
             
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -352,8 +352,8 @@ export default function NotificationSettingsPage() {
           </div>
 
           {/* その他の通知設定 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">その他の通知</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">その他の通知</h2>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between">

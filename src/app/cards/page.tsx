@@ -48,34 +48,35 @@ export default function CardsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ページヘッダー */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">カード一覧</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">作成したフラッシュカードを管理・編集できます</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">カード一覧</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">作成したフラッシュカードを管理・編集できます</p>
           </div>
           <Link
             href="/cards/new"
-            className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
+            className="px-3 py-2 sm:px-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center gap-2 text-sm sm:text-base"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            新規カード
+            <span className="hidden sm:inline">新規カード</span>
+            <span className="sm:hidden">新規作成</span>
           </Link>
         </div>
 
         {/* フィルター */}
         <div className="mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <label htmlFor="category" className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
               カテゴリでフィルター
             </label>
-            <div className="relative max-w-xs">
+            <div className="relative w-full sm:max-w-xs">
               <select
                 id="category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors appearance-none"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg sm:rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors appearance-none text-sm sm:text-base"
               >
                 <option value="">すべてのカテゴリ</option>
                 {categories.map(cat => (
@@ -84,7 +85,7 @@ export default function CardsPage() {
                   </option>
                 ))}
               </select>
-              <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>

@@ -73,8 +73,8 @@ export default function SecuritySettingsPage() {
         <div className="space-y-8">
           
           {/* 生体認証設定 */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">
               生体認証
             </h2>
             
@@ -94,16 +94,16 @@ export default function SecuritySettingsPage() {
             
             <div className="space-y-6">
               {!isSupported ? (
-                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">生体認証は利用できません</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">生体認証は利用できません</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         この端末またはブラウザでは生体認証がサポートされていません
                       </p>
                     </div>
@@ -111,24 +111,25 @@ export default function SecuritySettingsPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center flex-shrink-0">
                         {biometricType.includes('Face') ? (
-                          <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         ) : (
-                          <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                           </svg>
                         )}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{biometricType}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="min-w-0">
+                        <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">{biometricType}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                           {isEnabled ? '有効' : '無効'} • 
-                          アプリへの素早いアクセスが可能
+                          <span className="hidden sm:inline">アプリへの素早いアクセスが可能</span>
+                          <span className="sm:hidden">素早いアクセス</span>
                         </p>
                       </div>
                     </div>
@@ -146,24 +147,24 @@ export default function SecuritySettingsPage() {
                   </div>
 
                   {isEnabled && (
-                    <div className="pl-15">
+                    <div className="pl-0 sm:pl-15 mt-3 sm:mt-0">
                       <button
                         onClick={handleTestAuth}
                         disabled={testingAuth}
-                        className="px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors disabled:opacity-50"
+                        className="w-full sm:w-auto px-3 py-1.5 sm:px-4 sm:py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors disabled:opacity-50 text-sm sm:text-base"
                       >
                         {testingAuth ? '認証中...' : '認証テスト'}
                       </button>
                     </div>
                   )}
 
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <h3 className="font-medium text-blue-900 dark:text-blue-200 mb-2">生体認証について</h3>
-                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h3 className="text-sm sm:text-base font-medium text-blue-900 dark:text-blue-200 mb-2">生体認証について</h3>
+                    <ul className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-1">
                       <li>• 生体認証を有効にすると、アプリへの素早いアクセスが可能になります</li>
                       <li>• 認証情報は端末にのみ保存され、サーバーには送信されません</li>
-                      <li>• セキュリティを向上させるため、定期的にパスワードでのログインが必要です</li>
-                      <li>• 生体認証に失敗した場合は、通常のログイン方法を使用してください</li>
+                      <li className="hidden sm:block">• セキュリティを向上させるため、定期的にパスワードでのログインが必要です</li>
+                      <li className="hidden sm:block">• 生体認証に失敗した場合は、通常のログイン方法を使用してください</li>
                     </ul>
                   </div>
                 </>

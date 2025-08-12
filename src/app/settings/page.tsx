@@ -35,30 +35,30 @@ export default function SettingsPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ページヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">設定</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">アプリの設定とアカウント管理</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">設定</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm sm:text-base">アプリの設定とアカウント管理</p>
         </div>
         <div className="grid grid-cols-1 gap-6">
           {settingsItems.map((item) => (
             <Link key={item.href} href={item.href}>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-200 hover:scale-105">
-                <div className="flex items-center space-x-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-all duration-200 hover:scale-105">
+                <div className="flex items-center space-x-3 sm:space-x-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                      {item.icon}
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6">{item.icon}</div>
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                       {item.title}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {item.description}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
                     <svg
-                      className="w-5 h-5 text-gray-400 dark:text-gray-600"
+                      className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -77,11 +77,11 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             アプリ情報
           </h2>
-          <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+          <div className="space-y-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
             <div className="flex justify-between">
               <span>バージョン</span>
               <span>1.0.0</span>
