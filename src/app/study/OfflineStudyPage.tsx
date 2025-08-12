@@ -20,10 +20,11 @@ export default function OfflineStudyPage() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeChildren, setIncludeChildren] = useState(false);
+  const [isAllCategoriesSelected, setIsAllCategoriesSelected] = useState(false);
   const [studyStats, setStudyStats] = useState({
     correct: 0,
     incorrect: 0,
@@ -41,17 +42,17 @@ export default function OfflineStudyPage() {
       setLoading(false);
       
       // 進行状況があるかチェック
-      if (hasProgress && !selectedCategory) {
+      if (hasProgress && selectedCategories.length === 0) {
         setShowProgressModal(true);
       }
     }
-  }, [offlineCategories, offlineLoading, hasProgress, selectedCategory]);
+  }, [offlineCategories, offlineLoading, hasProgress, selectedCategories]);
 
   useEffect(() => {
-    if (selectedCategory && !offlineLoading) {
+    if ((selectedCategories.length > 0 || isAllCategoriesSelected) && !offlineLoading) {
       loadCards();
     }
-  }, [selectedCategory, includeChildren, offlineCards, offlineLoading]);
+  }, [selectedCategories, isAllCategoriesSelected, includeChildren, offlineCards, offlineLoading]);
 
   // 進行状況を復元する関数
   const continueFromProgress = () => {
@@ -63,7 +64,8 @@ export default function OfflineStudyPage() {
 
     setCards(progress.cards);
     setCurrentCardIndex(progress.currentCardIndex);
-    setSelectedCategory(progress.selectedCategory);
+    setSelectedCategories(progress.selectedCategories || [progress.selectedCategory].filter(Boolean)); // 後方互換性
+    setIsAllCategoriesSelected(progress.isAllCategoriesSelected || false);
     setIncludeChildren(progress.includeChildren);
     setStudyStats(progress.studyStats);
     setAnsweredCards(new Set(progress.answeredCards));
@@ -77,6 +79,33 @@ export default function OfflineStudyPage() {
   const startFresh = () => {
     clearProgress();
     setShowProgressModal(false);
+  };
+
+  // カテゴリ選択の管理
+  const toggleCategorySelection = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+    setIsAllCategoriesSelected(false);
+  };
+
+  const toggleAllCategories = () => {
+    if (isAllCategoriesSelected) {
+      setIsAllCategoriesSelected(false);
+      setSelectedCategories([]);
+    } else {
+      setIsAllCategoriesSelected(true);
+      setSelectedCategories([]);
+    }
+  };
+
+  const clearCategorySelection = () => {
+    setSelectedCategories([]);
+    setIsAllCategoriesSelected(false);
   };
 
   const startStudySession = async () => {
@@ -156,29 +185,60 @@ export default function OfflineStudyPage() {
       
       if (!isOnline) {
         // オフライン時はローカルデータを使用
-        const categoryIds = includeChildren ? getAllCategoryIds(selectedCategory) : [selectedCategory];
-        filteredCards = offlineCards.filter(card => 
-          categoryIds.includes(card.category_id || '')
-        );
+        if (isAllCategoriesSelected) {
+          filteredCards = offlineCards;
+        } else {
+          let categoryIds: string[] = [];
+          if (includeChildren) {
+            selectedCategories.forEach(catId => {
+              categoryIds.push(...getAllCategoryIds(catId));
+            });
+          } else {
+            categoryIds = selectedCategories;
+          }
+          filteredCards = offlineCards.filter(card => 
+            categoryIds.includes(card.category_id || '')
+          );
+        }
       } else {
         // オンライン時はSupabaseから認証済みユーザーのデータを取得
-        const categoryIds = includeChildren ? getAllCategoryIds(selectedCategory) : [selectedCategory];
-        
         // ユーザー認証を確認
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
           throw new Error('ユーザー認証が必要です');
         }
         
-        const { data, error } = await supabase
-          .from('flashcards')
-          .select('*')
-          .eq('user_id', user.id)
-          .in('category_id', categoryIds)
-          .order('created_at', { ascending: false });
+        if (isAllCategoriesSelected) {
+          // 全てのカテゴリから取得
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        filteredCards = data || [];
+          if (error) throw error;
+          filteredCards = data || [];
+        } else {
+          // 選択されたカテゴリから取得
+          let categoryIds: string[] = [];
+          if (includeChildren) {
+            selectedCategories.forEach(catId => {
+              categoryIds.push(...getAllCategoryIds(catId));
+            });
+          } else {
+            categoryIds = selectedCategories;
+          }
+          
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('*')
+            .eq('user_id', user.id)
+            .in('category_id', categoryIds)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+          filteredCards = data || [];
+        }
       }
 
       const shuffled = [...filteredCards].sort(() => Math.random() - 0.5);
@@ -245,11 +305,12 @@ export default function OfflineStudyPage() {
 
   // 進行状況を自動保存する関数
   const saveCurrentProgress = () => {
-    if (cards.length > 0 && selectedCategory && sessionStartTime) {
+    if (cards.length > 0 && (selectedCategories.length > 0 || isAllCategoriesSelected) && sessionStartTime) {
       const progress = {
         cards,
         currentCardIndex,
-        selectedCategory,
+        selectedCategories,
+        isAllCategoriesSelected,
         includeChildren,
         studyStats,
         sessionStartTime: sessionStartTime.toISOString(),
@@ -331,18 +392,18 @@ export default function OfflineStudyPage() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [cards, currentCardIndex, selectedCategory, sessionStartTime, studyStats, answeredCards]);
+  }, [cards, currentCardIndex, selectedCategories, isAllCategoriesSelected, sessionStartTime, studyStats, answeredCards]);
 
   // 定期的な進行状況保存（10秒間隔）
   useEffect(() => {
-    if (cards.length > 0 && selectedCategory) {
+    if (cards.length > 0 && (selectedCategories.length > 0 || isAllCategoriesSelected)) {
       const interval = setInterval(() => {
         saveCurrentProgress();
       }, 10000); // 10秒ごと
 
       return () => clearInterval(interval);
     }
-  }, [cards, selectedCategory, currentCardIndex, studyStats, answeredCards]);
+  }, [cards, selectedCategories, isAllCategoriesSelected, currentCardIndex, studyStats, answeredCards]);
 
   const currentCard = cards[currentCardIndex];
 
@@ -520,58 +581,173 @@ export default function OfflineStudyPage() {
           </div>
         )}
         
-        {!selectedCategory ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-6">カテゴリーを選択</h2>
+{selectedCategories.length === 0 && !isAllCategoriesSelected ? (
+          <div className="space-y-6">
+            {/* ヘッダー */}
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">学習を開始</h1>
+              <p className="text-gray-600 dark:text-gray-400">学習したいカテゴリを選択してください</p>
+            </div>
             
             {loading || offlineLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full animate-pulse">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <p className="mt-4 text-gray-500 dark:text-gray-400">読み込み中...</p>
               </div>
             ) : categories.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                カテゴリーがありません。
-                {!isOnline && 'オンライン時にカテゴリーを作成してください。'}
-              </p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 mb-2">カテゴリーがありません</p>
+                {!isOnline && <p className="text-sm text-orange-600 dark:text-orange-400">オンライン時にカテゴリーを作成してください</p>}
+              </div>
             ) : (
-              <div className="space-y-4">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                >
-                  <option value="">カテゴリーを選択してください</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+              <>
+                {/* 全てのカテゴリオプション */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                  <button
+                    onClick={toggleAllCategories}
+                    className="w-full p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">全てのカテゴリ</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">全範囲から出題</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full font-medium">
+                          {offlineCards.length} カード
+                        </span>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          isAllCategoriesSelected 
+                            ? 'bg-indigo-500 border-indigo-500 text-white' 
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {isAllCategoriesSelected && (
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
 
-                {selectedCategory && (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="includeChildren"
-                      checked={includeChildren}
-                      onChange={(e) => setIncludeChildren(e.target.checked)}
-                      className="rounded"
-                    />
-                    <label htmlFor="includeChildren" className="text-sm">
-                      サブカテゴリーも含める
-                    </label>
+                {/* カテゴリ一覧 */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-1">個別カテゴリ</h3>
+                  <div className="grid gap-3">
+                    {categories.map((category) => {
+                      const categoryCards = offlineCards.filter(card => card.category_id === category.id);
+                      const isSelected = selectedCategories.includes(category.id);
+                      
+                      return (
+                        <div key={category.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                          <button
+                            onClick={() => toggleCategorySelection(category.id)}
+                            className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                  isSelected 
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                    : 'bg-gray-100 dark:bg-gray-700'
+                                }`}>
+                                  <svg className={`w-5 h-5 ${
+                                    isSelected 
+                                      ? 'text-indigo-600 dark:text-indigo-400' 
+                                      : 'text-gray-400 dark:text-gray-500'
+                                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-white">{category.name}</h4>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">{categoryCards.length} カード</p>
+                                </div>
+                              </div>
+                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                isSelected 
+                                  ? 'bg-indigo-500 border-indigo-500 text-white' 
+                                  : 'border-gray-300 dark:border-gray-600'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* オプション設定 */}
+                {(selectedCategories.length > 0 || isAllCategoriesSelected) && (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="includeChildren"
+                        checked={includeChildren}
+                        onChange={(e) => setIncludeChildren(e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+                      />
+                      <label htmlFor="includeChildren" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        サブカテゴリーも含める
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      チェックすると、選択したカテゴリの子カテゴリからも出題されます
+                    </p>
                   </div>
                 )}
 
-                {selectedCategory && (
-                  <button
-                    onClick={loadCards}
-                    className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    学習を開始
-                  </button>
+                {/* 学習開始ボタン */}
+                {(selectedCategories.length > 0 || isAllCategoriesSelected) && (
+                  <div className="sticky bottom-6 z-10">
+                    <button
+                      onClick={loadCards}
+                      disabled={loading}
+                      className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:transform-none"
+                    >
+                      <div className="flex items-center justify-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-7 0a9 9 0 1114 0H7z" />
+                        </svg>
+                        <span>学習を開始</span>
+                        <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
+                          {isAllCategoriesSelected 
+                            ? `${offlineCards.length} カード` 
+                            : `${selectedCategories.reduce((sum, catId) => {
+                                return sum + offlineCards.filter(card => card.category_id === catId).length;
+                              }, 0)} カード`
+                          }
+                        </span>
+                      </div>
+                    </button>
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         ) : cards.length === 0 && !loading ? (
@@ -579,7 +755,7 @@ export default function OfflineStudyPage() {
             <p className="text-gray-500">このカテゴリーにはカードがありません</p>
             <button
               onClick={() => {
-                setSelectedCategory('');
+                clearCategorySelection();
                 setCards([]);
               }}
               className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
@@ -602,7 +778,7 @@ export default function OfflineStudyPage() {
                   onClick={() => {
                     // 進行状況をクリアして終了
                     clearProgress();
-                    setSelectedCategory('');
+                    clearCategorySelection();
                     setCards([]);
                   }}
                   className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"

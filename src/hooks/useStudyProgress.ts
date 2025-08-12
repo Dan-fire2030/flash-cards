@@ -8,7 +8,9 @@ const STUDY_PROGRESS_KEY = 'study_progress';
 interface StudyProgress {
   cards: Flashcard[];
   currentCardIndex: number;
-  selectedCategory: string;
+  selectedCategories: string[];
+  selectedCategory?: string; // 後方互換性のため
+  isAllCategoriesSelected: boolean;
   includeChildren: boolean;
   studyStats: {
     correct: number;
