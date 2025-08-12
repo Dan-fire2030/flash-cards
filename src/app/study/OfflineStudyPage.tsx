@@ -7,13 +7,11 @@ import { Flashcard, Category } from '@/types';
 import MainNavBar from '@/components/MainNavBar';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useOfflineCards } from '@/hooks/useOfflineCards';
-import { useStudyProgress } from '@/hooks/useStudyProgress';
 
 export default function OfflineStudyPage() {
   const router = useRouter();
   const { isOnline } = useOffline();
   const { cards: offlineCards, categories: offlineCategories, loading: offlineLoading } = useOfflineCards();
-  const { hasProgress, saveProgress, loadProgress, clearProgress } = useStudyProgress();
   
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -32,21 +30,14 @@ export default function OfflineStudyPage() {
   });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [answeredCards, setAnsweredCards] = useState<Set<number>>(new Set());
-  const [showProgressModal, setShowProgressModal] = useState(false);
 
   // オフラインデータを使用
   useEffect(() => {
     if (!offlineLoading) {
       setCategories(offlineCategories);
       setLoading(false);
-      
-      // 進行状況があるかチェック
-      if (hasProgress && selectedCategories.length === 0) {
-        setShowProgressModal(true);
-      }
     }
-  }, [offlineCategories, offlineLoading, hasProgress, selectedCategories]);
+  }, [offlineCategories, offlineLoading]);
 
   useEffect(() => {
     if ((selectedCategories.length > 0 || isAllCategoriesSelected) && !offlineLoading) {
@@ -54,32 +45,6 @@ export default function OfflineStudyPage() {
     }
   }, [selectedCategories, isAllCategoriesSelected, includeChildren, offlineCards, offlineLoading]);
 
-  // 進行状況を復元する関数
-  const continueFromProgress = () => {
-    const progress = loadProgress();
-    if (!progress) {
-      setShowProgressModal(false);
-      return;
-    }
-
-    setCards(progress.cards);
-    setCurrentCardIndex(progress.currentCardIndex);
-    setSelectedCategories(progress.selectedCategories || [progress.selectedCategory].filter(Boolean)); // 後方互換性
-    setIsAllCategoriesSelected(progress.isAllCategoriesSelected || false);
-    setIncludeChildren(progress.includeChildren);
-    setStudyStats(progress.studyStats);
-    setAnsweredCards(new Set(progress.answeredCards));
-    setSessionStartTime(new Date(progress.sessionStartTime));
-    setShowProgressModal(false);
-
-    console.log('Continuing from saved progress:', progress);
-  };
-
-  // 新しく始める関数
-  const startFresh = () => {
-    clearProgress();
-    setShowProgressModal(false);
-  };
 
   // カテゴリ選択の管理
   const toggleCategorySelection = (categoryId: string) => {
@@ -303,35 +268,14 @@ export default function OfflineStudyPage() {
     handleAnswer(isCorrect);
   };
 
-  // 進行状況を自動保存する関数
-  const saveCurrentProgress = () => {
-    if (cards.length > 0 && (selectedCategories.length > 0 || isAllCategoriesSelected) && sessionStartTime) {
-      const progress = {
-        cards,
-        currentCardIndex,
-        selectedCategories,
-        isAllCategoriesSelected,
-        includeChildren,
-        studyStats,
-        sessionStartTime: sessionStartTime.toISOString(),
-        answeredCards: Array.from(answeredCards)
-      };
-      saveProgress(progress);
-    }
-  };
-
   const nextCard = () => {
     if (currentCardIndex < cards.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
       setShowAnswer(false);
       setSelectedOption(null);
       setHasAnswered(false);
-      
-      // 進行状況を保存
-      setTimeout(saveCurrentProgress, 100); // 状態更新後に保存
     } else {
-      // 学習完了 - 進行状況をクリア
-      clearProgress();
+      // 学習完了
       router.push('/');
     }
   };
@@ -382,28 +326,6 @@ export default function OfflineStudyPage() {
     return () => window.removeEventListener('keypress', handleKeyPress);
   }, [currentCardIndex, showAnswer, cards, hasAnswered]);
 
-  // ページ離脱時に進行状況を保存
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (cards.length > 0 && currentCardIndex < cards.length) {
-        saveCurrentProgress();
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [cards, currentCardIndex, selectedCategories, isAllCategoriesSelected, sessionStartTime, studyStats, answeredCards]);
-
-  // 定期的な進行状況保存（10秒間隔）
-  useEffect(() => {
-    if (cards.length > 0 && (selectedCategories.length > 0 || isAllCategoriesSelected)) {
-      const interval = setInterval(() => {
-        saveCurrentProgress();
-      }, 10000); // 10秒ごと
-
-      return () => clearInterval(interval);
-    }
-  }, [cards, selectedCategories, isAllCategoriesSelected, currentCardIndex, studyStats, answeredCards]);
 
   const currentCard = cards[currentCardIndex];
 
@@ -513,65 +435,10 @@ export default function OfflineStudyPage() {
     );
   };
 
-  // 進行状況選択モーダル
-  const renderProgressModal = () => {
-    if (!showProgressModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md mx-4 shadow-xl">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              学習を再開しますか？
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              前回の学習の続きから始めることができます
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={continueFromProgress}
-              className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transform hover:-translate-y-0.5 transition-all"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-7 0a9 9 0 1114 0H7z" />
-                </svg>
-                続きから始める
-              </div>
-            </button>
-            
-            <button
-              onClick={startFresh}
-              className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                始めから始める
-              </div>
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
-            「始めから始める」を選ぶと、保存された進行状況は削除されます
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <MainNavBar />
-      {renderProgressModal()}
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {!isOnline && (
           <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
@@ -776,8 +643,7 @@ export default function OfflineStudyPage() {
                 </span>
                 <button
                   onClick={() => {
-                    // 進行状況をクリアして終了
-                    clearProgress();
+                    // カテゴリ選択をクリアして終了
                     clearCategorySelection();
                     setCards([]);
                   }}
