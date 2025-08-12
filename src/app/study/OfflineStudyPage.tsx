@@ -12,7 +12,7 @@ import { useStudyProgress } from '@/hooks/useStudyProgress';
 export default function OfflineStudyPage() {
   const router = useRouter();
   const { isOnline } = useOffline();
-  const { cards: offlineCards, categories: offlineCategories, loading: offlineLoading, isOffline } = useOfflineCards();
+  const { cards: offlineCards, categories: offlineCategories, loading: offlineLoading } = useOfflineCards();
   const { hasProgress, saveProgress, loadProgress, clearProgress } = useStudyProgress();
   
   const [cards, setCards] = useState<Flashcard[]>([]);
@@ -81,7 +81,7 @@ export default function OfflineStudyPage() {
 
   const startStudySession = async () => {
     // オフライン時はセッション記録をスキップ
-    if (isOffline) {
+    if (!isOnline) {
       setSessionStartTime(new Date());
       return;
     }
@@ -154,19 +154,26 @@ export default function OfflineStudyPage() {
       
       let filteredCards: Flashcard[];
       
-      if (isOffline) {
+      if (!isOnline) {
         // オフライン時はローカルデータを使用
         const categoryIds = includeChildren ? getAllCategoryIds(selectedCategory) : [selectedCategory];
         filteredCards = offlineCards.filter(card => 
           categoryIds.includes(card.category_id || '')
         );
       } else {
-        // オンライン時は従来通りSupabaseから取得
+        // オンライン時はSupabaseから認証済みユーザーのデータを取得
         const categoryIds = includeChildren ? getAllCategoryIds(selectedCategory) : [selectedCategory];
         
+        // ユーザー認証を確認
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          throw new Error('ユーザー認証が必要です');
+        }
+        
         const { data, error } = await supabase
-          .from('cards')
+          .from('flashcards')
           .select('*')
+          .eq('user_id', user.id)
           .in('category_id', categoryIds)
           .order('created_at', { ascending: false });
 
@@ -205,7 +212,7 @@ export default function OfflineStudyPage() {
     }));
 
     // オフライン時は学習記録の保存をスキップ
-    if (!isOffline && sessionId) {
+    if (isOnline && sessionId) {
       try {
         const studyTimeMinutes = sessionStartTime 
           ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 60000)
@@ -505,7 +512,7 @@ export default function OfflineStudyPage() {
       <MainNavBar />
       {renderProgressModal()}
       <div className="container mx-auto px-4 py-8 max-w-3xl">
-        {isOffline && (
+        {!isOnline && (
           <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
               オフラインモードで学習中です。学習記録は保存されません。
@@ -524,7 +531,7 @@ export default function OfflineStudyPage() {
             ) : categories.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 カテゴリーがありません。
-                {isOffline && 'オンライン時にカテゴリーを作成してください。'}
+                {!isOnline && 'オンライン時にカテゴリーを作成してください。'}
               </p>
             ) : (
               <div className="space-y-4">
