@@ -11,23 +11,13 @@ export async function GET() {
     console.log('Auth check:', { user: user?.email, authError });
     
     if (authError || !user) {
-      console.log('Unauthorized access attempt');
-      // 認証なしでも基本的なデータを返す（開発・テスト用）
-      const { data: publicCards, error: publicError } = await supabase
-        .from('flashcards')
-        .select('*')
-        .limit(10);
-      
-      if (publicError) {
-        console.error('Error fetching public cards:', publicError);
-        return NextResponse.json({ error: 'Failed to fetch data', details: publicError }, { status: 500 });
-      }
-      
-      return NextResponse.json(publicCards || [], {
-        headers: {
-          'Cache-Control': 'private, max-age=0, must-revalidate',
-        },
-      });
+      console.log('Unauthorized access attempt:', authError);
+      // 認証が失敗した場合は401を返す
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'Please log in to access your flashcards',
+        authError: authError?.message 
+      }, { status: 401 });
     }
 
     // ユーザーのカードを取得

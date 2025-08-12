@@ -11,23 +11,13 @@ export async function GET() {
     console.log('Categories auth check:', { user: user?.email, authError });
     
     if (authError || !user) {
-      console.log('Unauthorized access attempt for categories');
-      // 認証なしでも基本的なデータを返す（開発・テスト用）
-      const { data: publicCategories, error: publicError } = await supabase
-        .from('categories')
-        .select('*')
-        .limit(10);
-      
-      if (publicError) {
-        console.error('Error fetching public categories:', publicError);
-        return NextResponse.json({ error: 'Failed to fetch data', details: publicError }, { status: 500 });
-      }
-      
-      return NextResponse.json(publicCategories || [], {
-        headers: {
-          'Cache-Control': 'private, max-age=0, must-revalidate',
-        },
-      });
+      console.log('Unauthorized access attempt for categories:', authError);
+      // 認証が失敗した場合は401を返す
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'Please log in to access your categories',
+        authError: authError?.message 
+      }, { status: 401 });
     }
 
     // ユーザーのカテゴリーを取得

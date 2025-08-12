@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Flashcard, Category } from '@/types';
 import { useOffline } from '@/contexts/OfflineContext';
+import { supabase } from '@/lib/supabase';
 
 const CACHE_KEY_CARDS = 'offline_cards';
 const CACHE_KEY_CATEGORIES = 'offline_categories';
@@ -55,20 +56,45 @@ export function useOfflineCards() {
     }
   }, []);
 
-  // APIからデータを取得
-  const fetchFromAPI = useCallback(async () => {
+  // Supabaseから直接データを取得
+  const fetchFromSupabase = useCallback(async () => {
     try {
-      const [cardsResponse, categoriesResponse] = await Promise.all([
-        fetch('/api/cards'),
-        fetch('/api/categories')
-      ]);
-
-      if (!cardsResponse.ok || !categoriesResponse.ok) {
-        throw new Error('Failed to fetch data');
+      // 現在のユーザーを取得
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.log('User not authenticated:', authError);
+        return false;
       }
 
-      const cardsData = await cardsResponse.json();
-      const categoriesData = await categoriesResponse.json();
+      // カードとカテゴリを並行取得
+      const [cardsResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('flashcards')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true })
+      ]);
+
+      if (cardsResult.error) {
+        console.error('Error fetching cards:', cardsResult.error);
+        return false;
+      }
+
+      if (categoriesResult.error) {
+        console.error('Error fetching categories:', categoriesResult.error);
+        return false;
+      }
+
+      const cardsData = cardsResult.data || [];
+      const categoriesData = categoriesResult.data || [];
+
+      console.log(`Fetched ${cardsData.length} cards and ${categoriesData.length} categories for user ${user.email}`);
 
       setCards(cardsData);
       setCategories(categoriesData);
@@ -77,7 +103,7 @@ export function useOfflineCards() {
       saveToCache(cardsData, categoriesData);
       return true;
     } catch (err) {
-      console.error('Failed to fetch from API:', err);
+      console.error('Failed to fetch from Supabase:', err);
       return false;
     }
   }, [saveToCache]);
@@ -88,10 +114,10 @@ export function useOfflineCards() {
     setError(null);
 
     if (isOnline) {
-      // オンラインの場合はAPIから取得
-      const success = await fetchFromAPI();
+      // オンラインの場合はSupabaseから取得
+      const success = await fetchFromSupabase();
       if (!success) {
-        // API取得に失敗した場合はキャッシュから読み込み
+        // Supabase取得に失敗した場合はキャッシュから読み込み
         const cacheSuccess = loadFromCache();
         if (!cacheSuccess) {
           setError('データの読み込みに失敗しました');
@@ -106,9 +132,9 @@ export function useOfflineCards() {
     }
 
     setLoading(false);
-  }, [isOnline, fetchFromAPI, loadFromCache]);
+  }, [isOnline, fetchFromSupabase, loadFromCache]);
 
-  // 初回読み込み - まずキャッシュから読み込んでから必要に応じてAPIから更新
+  // 初回読み込み - まずキャッシュから読み込んでから必要に応じてSupabaseから更新
   useEffect(() => {
     const initialLoad = async () => {
       setLoading(true);
@@ -122,10 +148,10 @@ export function useOfflineCards() {
         
         // キャッシュがある場合でも、オンラインなら最新データを取得
         if (isOnline) {
-          const apiSuccess = await fetchFromAPI();
-          if (!apiSuccess) {
-            // API取得に失敗してもキャッシュがあるのでエラーにしない
-            console.warn('API fetch failed, using cached data');
+          const supabaseSuccess = await fetchFromSupabase();
+          if (!supabaseSuccess) {
+            // Supabase取得に失敗してもキャッシュがあるのでエラーにしない
+            console.warn('Supabase fetch failed, using cached data');
           }
         }
       } else {
@@ -135,15 +161,15 @@ export function useOfflineCards() {
     };
 
     initialLoad();
-  }, [isOnline, loadFromCache, fetchFromAPI]);
+  }, [isOnline, loadFromCache, fetchFromSupabase]);
 
   // オンライン状態が変わったら再読み込み（オンラインになった時のみ）
   useEffect(() => {
     if (isOnline && !loading) {
       // バックグラウンドで更新（UIはブロックしない）
-      fetchFromAPI().catch(console.error);
+      fetchFromSupabase().catch(console.error);
     }
-  }, [isOnline, loading, fetchFromAPI]);
+  }, [isOnline, loading, fetchFromSupabase]);
 
   // キャッシュをクリアする関数
   const clearCache = useCallback(() => {
