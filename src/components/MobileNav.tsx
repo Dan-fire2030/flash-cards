@@ -115,13 +115,6 @@ export default function MobileNav() {
                 <span className="font-semibold text-lg">カード一覧</span>
               </Link>
               <Link
-                href="/stats"
-                onClick={() => setIsOpen(false)}
-                className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
-              >
-                <span className="font-semibold text-lg">統計</span>
-              </Link>
-              <Link
                 href="/settings"
                 onClick={() => setIsOpen(false)}
                 className="block mx-3 mb-2 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-all duration-300 group"
