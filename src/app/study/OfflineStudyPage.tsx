@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Flashcard, Category } from '@/types';
@@ -30,6 +30,55 @@ export default function OfflineStudyPage() {
   });
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const isRestoringState = useRef(false);
+
+  // セッション状態の保存
+  const saveSessionState = () => {
+    if (cards.length > 0) {
+      const state = {
+        cards,
+        currentCardIndex,
+        showAnswer,
+        selectedOption,
+        hasAnswered,
+        selectedCategories,
+        includeChildren,
+        isAllCategoriesSelected,
+        studyStats,
+        sessionId,
+        sessionStartTime: sessionStartTime?.toISOString()
+      };
+      sessionStorage.setItem('studySessionState', JSON.stringify(state));
+    }
+  };
+
+  // セッション状態の復元
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('studySessionState');
+    if (savedState && !isRestoringState.current) {
+      isRestoringState.current = true;
+      try {
+        const state = JSON.parse(savedState);
+        setCards(state.cards || []);
+        setCurrentCardIndex(state.currentCardIndex || 0);
+        setShowAnswer(state.showAnswer || false);
+        setSelectedOption(state.selectedOption);
+        setHasAnswered(state.hasAnswered || false);
+        setSelectedCategories(state.selectedCategories || []);
+        setIncludeChildren(state.includeChildren || false);
+        setIsAllCategoriesSelected(state.isAllCategoriesSelected || false);
+        setStudyStats(state.studyStats || { correct: 0, incorrect: 0, remaining: 0 });
+        setSessionId(state.sessionId);
+        setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
+        
+        // 復元後にセッション状態をクリア
+        sessionStorage.removeItem('studySessionState');
+      } catch (error) {
+        console.error('Failed to restore session state:', error);
+        sessionStorage.removeItem('studySessionState');
+      }
+    }
+  }, []);
 
   // オフラインデータを使用
   useEffect(() => {
@@ -40,7 +89,7 @@ export default function OfflineStudyPage() {
   }, [offlineCategories, offlineLoading]);
 
   useEffect(() => {
-    if ((selectedCategories.length > 0 || isAllCategoriesSelected) && !offlineLoading) {
+    if ((selectedCategories.length > 0 || isAllCategoriesSelected) && !offlineLoading && !isRestoringState.current) {
       loadCards();
     }
   }, [selectedCategories, isAllCategoriesSelected, includeChildren, offlineCards, offlineLoading]);
@@ -285,7 +334,8 @@ export default function OfflineStudyPage() {
       setSelectedOption(null);
       setHasAnswered(false);
     } else {
-      // 学習完了
+      // 学習完了時にセッション状態をクリア
+      sessionStorage.removeItem('studySessionState');
       router.push('/');
     }
   };
@@ -335,6 +385,27 @@ export default function OfflineStudyPage() {
     window.addEventListener('keypress', handleKeyPress);
     return () => window.removeEventListener('keypress', handleKeyPress);
   }, [currentCardIndex, showAnswer, cards, hasAnswered]);
+
+  // ページを離れる時に状態を保存
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveSessionState();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        saveSessionState();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cards, currentCardIndex, showAnswer, selectedOption, hasAnswered, selectedCategories, includeChildren, isAllCategoriesSelected, studyStats, sessionId, sessionStartTime]);
 
 
   const currentCard = cards[currentCardIndex];
@@ -405,7 +476,7 @@ export default function OfflineStudyPage() {
             {showAnswer && (
               <div className="mt-8 space-y-4">
                 <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded">
-                  <p className="text-xl">{currentCard?.back_text}</p>
+                  <p className="text-xl whitespace-pre-wrap">{currentCard?.back_text}</p>
                 </div>
                 {currentCard?.back_image_url && (
                   <div className="mt-4">
@@ -669,6 +740,7 @@ export default function OfflineStudyPage() {
                 <button
                   onClick={() => {
                     // カテゴリ選択をクリアして終了
+                    sessionStorage.removeItem('studySessionState');
                     clearCategorySelection();
                     setCards([]);
                   }}
