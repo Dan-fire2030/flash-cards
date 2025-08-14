@@ -293,13 +293,22 @@ export default function NewCardPage() {
                   <div className="space-y-3">
                     {options.map((option, index) => (
                       <div key={index} className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="correctOption"
-                          checked={correctOptionIndex === index}
-                          onChange={() => setCorrectOptionIndex(index)}
-                          className="w-5 h-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                        />
+                        <label className="relative flex items-center justify-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name="correctOption"
+                            checked={correctOptionIndex === index}
+                            onChange={() => setCorrectOptionIndex(index)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full peer-checked:border-indigo-600 dark:peer-checked:border-indigo-400 peer-checked:border-[3px] transition-all">
+                            <div className={`w-full h-full rounded-full flex items-center justify-center ${correctOptionIndex === index ? 'bg-indigo-600 dark:bg-indigo-400' : ''}`}>
+                              {correctOptionIndex === index && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                          </div>
+                        </label>
                         <div className="flex-1 relative">
                           <input
                             type="text"
@@ -307,12 +316,16 @@ export default function NewCardPage() {
                             onChange={(e) =>
                               handleOptionChange(index, e.target.value)
                             }
-                            className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors"
+                            className={`w-full px-4 py-3 border-2 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors ${
+                              correctOptionIndex === index
+                                ? 'border-green-400 dark:border-green-500 bg-green-50 dark:bg-green-900/20'
+                                : 'border-gray-200 dark:border-gray-600'
+                            }`}
                             placeholder={`選択肢 ${index + 1}`}
                             required
                           />
                           {correctOptionIndex === index && (
-                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md font-medium">
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs bg-green-600 dark:bg-green-500 text-white px-2 py-1 rounded-md font-medium">
                               正解
                             </span>
                           )}
