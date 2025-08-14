@@ -36,10 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
       
-      if (event === 'SIGNED_IN') {
-        console.log('User signed in, redirecting to home...')
-        router.push('/')
-      } else if (event === 'SIGNED_OUT') {
+      // SIGNED_OUTの場合のみログイン画面にリダイレクト
+      // SIGNED_INでは自動リダイレクトを行わない（画面から離れた時の自動リダイレクトを防ぐため）
+      if (event === 'SIGNED_OUT') {
         console.log('User signed out, redirecting to login...')
         router.push('/login')
       }

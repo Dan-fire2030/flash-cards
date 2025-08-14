@@ -24,6 +24,7 @@ export default function NewCardPage() {
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<string[]>(["", "", "", ""]);
   const [correctOptionIndex, setCorrectOptionIndex] = useState<number>(0);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -106,7 +107,17 @@ export default function NewCardPage() {
       const { error } = await supabase.from("flashcards").insert(cardData);
 
       if (error) throw error;
-      router.push("/");
+      
+      // カード作成成功後、フォームをリセットして新規作成を続行可能にする
+      setFrontText("");
+      setBackText("");
+      setBackImageUrl(null);
+      setOptions(["", "", "", ""]);
+      setCorrectOptionIndex(0);
+      
+      // 成功メッセージを表示
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       console.error("Error creating card:", error);
       alert("カードの作成に失敗しました");
@@ -127,6 +138,20 @@ export default function NewCardPage() {
       <SubHeader title="新規カード作成" showBackButton={true} />
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 成功メッセージ */}
+        {showSuccessMessage && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <p className="text-green-800 dark:text-green-200 font-medium">
+                カードが作成されました！続けて作成できます。
+              </p>
+            </div>
+          </div>
+        )}
+        
         <div className="animate-fadeIn">
           <form
             onSubmit={handleSubmit}
