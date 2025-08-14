@@ -23,6 +23,7 @@ export default function OfflineStudyPage() {
   const [loading, setLoading] = useState(true);
   const [includeChildren, setIncludeChildren] = useState(false);
   const [isAllCategoriesSelected, setIsAllCategoriesSelected] = useState(false);
+  const [quizLength, setQuizLength] = useState<number | null>(null);
   const [studyStats, setStudyStats] = useState({
     correct: 0,
     incorrect: 0,
@@ -44,6 +45,7 @@ export default function OfflineStudyPage() {
         selectedCategories,
         includeChildren,
         isAllCategoriesSelected,
+        quizLength,
         studyStats,
         sessionId,
         sessionStartTime: sessionStartTime?.toISOString()
@@ -67,6 +69,7 @@ export default function OfflineStudyPage() {
         setSelectedCategories(state.selectedCategories || []);
         setIncludeChildren(state.includeChildren || false);
         setIsAllCategoriesSelected(state.isAllCategoriesSelected || false);
+        setQuizLength(state.quizLength || null);
         setStudyStats(state.studyStats || { correct: 0, incorrect: 0, remaining: 0 });
         setSessionId(state.sessionId);
         setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
@@ -266,7 +269,9 @@ export default function OfflineStudyPage() {
       }
 
       const shuffled = shuffleArray(filteredCards);
-      setCards(shuffled);
+      // クイズ長が設定されている場合は、その分だけ取得
+      const finalCards = quizLength && quizLength > 0 ? shuffled.slice(0, quizLength) : shuffled;
+      setCards(finalCards);
       setCurrentCardIndex(0);
       setShowAnswer(false);
       setSelectedOption(null);
@@ -274,10 +279,10 @@ export default function OfflineStudyPage() {
       setStudyStats({
         correct: 0,
         incorrect: 0,
-        remaining: shuffled.length
+        remaining: finalCards.length
       });
       
-      if (!sessionId && shuffled.length > 0) {
+      if (!sessionId && finalCards.length > 0) {
         await startStudySession();
       }
     } catch (error) {
@@ -405,7 +410,7 @@ export default function OfflineStudyPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [cards, currentCardIndex, showAnswer, selectedOption, hasAnswered, selectedCategories, includeChildren, isAllCategoriesSelected, studyStats, sessionId, sessionStartTime]);
+  }, [cards, currentCardIndex, showAnswer, selectedOption, hasAnswered, selectedCategories, includeChildren, isAllCategoriesSelected, quizLength, studyStats, sessionId, sessionStartTime]);
 
 
   const currentCard = cards[currentCardIndex];
@@ -584,20 +589,32 @@ export default function OfflineStudyPage() {
             ) : (
               <>
                 {/* 全てのカテゴリオプション */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border-2 transition-all overflow-hidden ${
+                  isAllCategoriesSelected 
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+                    : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
+                }`}>
                   <button
                     onClick={toggleAllCategories}
-                    className="w-full p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="w-full p-6 text-left transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                          isAllCategoriesSelected
+                            ? 'bg-gradient-to-br from-indigo-500 to-purple-500'
+                            : 'bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700'
+                        }`}>
                           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                           </svg>
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">全てのカテゴリ</h3>
+                          <h3 className={`font-semibold transition-colors ${
+                            isAllCategoriesSelected
+                              ? 'text-indigo-900 dark:text-indigo-100'
+                              : 'text-gray-900 dark:text-white'
+                          }`}>全てのカテゴリ</h3>
                           <p className="text-sm text-gray-500 dark:text-gray-400">全範囲からランダムに出題</p>
                         </div>
                       </div>
@@ -605,17 +622,13 @@ export default function OfflineStudyPage() {
                         <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full font-medium">
                           {offlineCards.length} カード
                         </span>
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                          isAllCategoriesSelected 
-                            ? 'bg-indigo-500 border-indigo-500 text-white' 
-                            : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                          {isAllCategoriesSelected && (
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        {isAllCategoriesSelected && (
+                          <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -630,42 +643,46 @@ export default function OfflineStudyPage() {
                       const isSelected = selectedCategories.includes(category.id);
                       
                       return (
-                        <div key={category.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div key={category.id} className={`rounded-xl shadow-sm border-2 transition-all overflow-hidden ${
+                          isSelected 
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+                            : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-600'
+                        }`}>
                           <button
                             onClick={() => toggleCategorySelection(category.id)}
-                            className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            className="w-full p-4 text-left transition-colors"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
                                   isSelected 
-                                    ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                    ? 'bg-indigo-500' 
                                     : 'bg-gray-100 dark:bg-gray-700'
                                 }`}>
                                   <svg className={`w-5 h-5 ${
                                     isSelected 
-                                      ? 'text-indigo-600 dark:text-indigo-400' 
+                                      ? 'text-white' 
                                       : 'text-gray-400 dark:text-gray-500'
                                   }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                   </svg>
                                 </div>
                                 <div>
-                                  <h4 className="font-medium text-gray-900 dark:text-white">{category.name}</h4>
+                                  <h4 className={`font-medium transition-colors ${
+                                    isSelected
+                                      ? 'text-indigo-900 dark:text-indigo-100'
+                                      : 'text-gray-900 dark:text-white'
+                                  }`}>{category.name}</h4>
                                   <p className="text-sm text-gray-500 dark:text-gray-400">{categoryCards.length} カード</p>
                                 </div>
                               </div>
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                isSelected 
-                                  ? 'bg-indigo-500 border-indigo-500 text-white' 
-                                  : 'border-gray-300 dark:border-gray-600'
-                              }`}>
-                                {isSelected && (
-                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              {isSelected && (
+                                <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
+                                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
-                                )}
-                              </div>
+                                  </div>
+                              )}
                             </div>
                           </button>
                         </div>
@@ -676,22 +693,69 @@ export default function OfflineStudyPage() {
 
                 {/* オプション設定 */}
                 {(selectedCategories.length > 0 || isAllCategoriesSelected) && (
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        id="includeChildren"
-                        checked={includeChildren}
-                        onChange={(e) => setIncludeChildren(e.target.checked)}
-                        className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
-                      />
-                      <label htmlFor="includeChildren" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        サブカテゴリーも含める
-                      </label>
+                  <div className="space-y-4">
+                    {/* サブカテゴリ設定 */}
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                      <button
+                        onClick={() => setIncludeChildren(!includeChildren)}
+                        className="flex items-center space-x-3 w-full"
+                      >
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
+                          includeChildren
+                            ? 'bg-indigo-500 border-indigo-500'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {includeChildren && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            サブカテゴリーも含める
+                          </span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            選択したカテゴリの子カテゴリからも出題されます
+                          </p>
+                        </div>
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      チェックすると、選択したカテゴリの子カテゴリからも出題されます
-                    </p>
+
+                    {/* クイズ長設定 */}
+                    {isAllCategoriesSelected && (
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">出題数を設定</h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                          {[10, 20, 30, 50, 100].map((num) => (
+                            <button
+                              key={num}
+                              onClick={() => setQuizLength(num)}
+                              className={`py-3 px-4 text-sm font-medium rounded-lg border-2 transition-all ${
+                                quizLength === num
+                                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                              }`}
+                            >
+                              {num}問
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => setQuizLength(null)}
+                          className={`w-full py-3 px-4 text-sm font-medium rounded-lg border-2 transition-all ${
+                            quizLength === null
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                          }`}
+                        >
+                          全て ({offlineCards.length}問)
+                        </button>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                          設定した問題数だけランダムに出題されます
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -710,7 +774,7 @@ export default function OfflineStudyPage() {
                         <span>学習を開始</span>
                         <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
                           {isAllCategoriesSelected 
-                            ? `${offlineCards.length} カード` 
+                            ? (quizLength ? `${quizLength} カード` : `${offlineCards.length} カード`)
                             : `${selectedCategories.reduce((sum, catId) => {
                                 return sum + offlineCards.filter(card => card.category_id === catId).length;
                               }, 0)} カード`
@@ -730,6 +794,7 @@ export default function OfflineStudyPage() {
               onClick={() => {
                 clearCategorySelection();
                 setCards([]);
+                setQuizLength(null);
               }}
               className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
             >
@@ -753,6 +818,7 @@ export default function OfflineStudyPage() {
                     sessionStorage.removeItem('studySessionState');
                     clearCategorySelection();
                     setCards([]);
+                    setQuizLength(null);
                   }}
                   className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                 >
