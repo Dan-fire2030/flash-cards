@@ -409,11 +409,21 @@ export default function OfflineStudyPage() {
 
 
   const currentCard = cards[currentCardIndex];
+  
+  // 選択肢をランダムに並び替える状態
+  const [shuffledOptions, setShuffledOptions] = useState<{text: string; originalIndex: number}[]>([]);
+  
+  // カードが変更されたときに選択肢をシャッフル
+  useEffect(() => {
+    if (currentCard?.card_type === 'multiple_choice' && currentCard.options) {
+      const optionsWithIndex = currentCard.options.map((text, index) => ({ text, originalIndex: index }));
+      const shuffled = [...optionsWithIndex].sort(() => Math.random() - 0.5);
+      setShuffledOptions(shuffled);
+    }
+  }, [currentCard]);
 
   const renderMultipleChoiceCard = () => {
     if (currentCard?.card_type !== 'multiple_choice') return null;
-
-    const options = currentCard.options || [];
 
     return (
       <div className="space-y-4">
@@ -422,9 +432,9 @@ export default function OfflineStudyPage() {
         </div>
         
         <div className="space-y-3">
-          {options.map((option, index) => {
-            const isSelected = selectedOption === index;
-            const isCorrect = index === currentCard.correct_option_index;
+          {shuffledOptions.map((option, displayIndex) => {
+            const isSelected = selectedOption === option.originalIndex;
+            const isCorrect = option.originalIndex === currentCard.correct_option_index;
             
             let bgColor = 'bg-white dark:bg-gray-800';
             if (hasAnswered) {
@@ -439,15 +449,15 @@ export default function OfflineStudyPage() {
             
             return (
               <button
-                key={index}
-                onClick={() => handleMultipleChoiceAnswer(index)}
+                key={option.originalIndex}
+                onClick={() => handleMultipleChoiceAnswer(option.originalIndex)}
                 disabled={hasAnswered}
                 className={`w-full p-4 text-left rounded-lg border-2 transition-colors ${bgColor} ${
                   !hasAnswered ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : 'cursor-not-allowed'
                 }`}
               >
-                <span className="font-medium">{index + 1}. </span>
-                {option}
+                <span className="font-medium">{displayIndex + 1}. </span>
+                {option.text}
                 {hasAnswered && isCorrect && ' ✓'}
                 {hasAnswered && isSelected && !isCorrect && ' ✗'}
               </button>
@@ -458,7 +468,7 @@ export default function OfflineStudyPage() {
         {hasAnswered && (
           <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
             <p className="text-sm font-medium text-blue-900 dark:text-blue-100">正解:</p>
-            <p className="text-sm text-blue-800 dark:text-blue-200">{options[currentCard.correct_option_index || 0]}</p>
+            <p className="text-sm text-blue-800 dark:text-blue-200">{currentCard.options?.[currentCard.correct_option_index || 0]}</p>
           </div>
         )}
       </div>

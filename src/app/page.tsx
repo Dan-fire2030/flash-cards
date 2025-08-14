@@ -80,48 +80,52 @@ export default function Home() {
           </div>
 
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                 {currentDate.getFullYear()}年{currentDate.getMonth() + 1}月の学習記録
               </h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() - 1);
-                    setCurrentDate(newDate);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span className="text-sm">前月</span>
-                </button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {/* 今月ボタン - モバイルでは上に配置 */}
                 <button
                   onClick={() => setCurrentDate(new Date())}
-                  className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm font-medium"
+                  className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-blue-500 active:text-white transition-colors text-sm font-medium order-1 sm:order-2"
                 >
                   今月
                 </button>
-                <button
-                  onClick={() => {
-                    const newDate = new Date(currentDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    setCurrentDate(newDate);
-                  }}
-                  disabled={
-                    currentDate.getFullYear() > new Date().getFullYear() ||
-                    (currentDate.getFullYear() === new Date().getFullYear() && 
-                     currentDate.getMonth() >= new Date().getMonth())
-                  }
-                  className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                >
-                  <span className="text-sm">次月</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                {/* 前月・次月ボタン */}
+                <div className="flex gap-2 order-2 sm:order-1">
+                  <button
+                    onClick={() => {
+                      const newDate = new Date(currentDate);
+                      newDate.setMonth(newDate.getMonth() - 1);
+                      setCurrentDate(newDate);
+                    }}
+                    className="px-3 py-2 sm:px-4 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span className="text-sm">前月</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newDate = new Date(currentDate);
+                      newDate.setMonth(newDate.getMonth() + 1);
+                      setCurrentDate(newDate);
+                    }}
+                    disabled={
+                      currentDate.getFullYear() > new Date().getFullYear() ||
+                      (currentDate.getFullYear() === new Date().getFullYear() && 
+                       currentDate.getMonth() >= new Date().getMonth())
+                    }
+                    className="px-3 py-2 sm:px-4 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 flex-1 sm:flex-none justify-center"
+                  >
+                    <span className="text-sm">次月</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
             

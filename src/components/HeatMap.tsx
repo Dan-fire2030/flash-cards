@@ -155,9 +155,9 @@ export default function HeatMap({
         </div>
         
         {/* カレンダーグリッド */}
-        <div className="space-y-1">
+        <div className="space-y-0.5 sm:space-y-1">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 gap-1">
+            <div key={weekIndex} className="grid grid-cols-7 gap-0.5 sm:gap-1">
               {week.map((day, dayIndex) => (
                 <div
                   key={`${weekIndex}-${dayIndex}`}
@@ -168,16 +168,16 @@ export default function HeatMap({
                       className={`
                         w-full h-full rounded-sm border border-gray-200 dark:border-gray-700
                         transition-all duration-200 hover:scale-110 hover:z-10
-                        hover:shadow-lg relative
+                        hover:shadow-lg relative text-xs sm:text-sm
                         ${day.level >= 0 ? getColorClass(day.level) : 'bg-white dark:bg-gray-900'}
                       `}
                       onClick={() => setSelectedDay(day)}
                     >
-                      <span className="absolute top-0.5 left-1 text-xs text-gray-600 dark:text-gray-400">
+                      <span className="absolute top-0.5 left-0.5 sm:left-1 text-xs text-gray-600 dark:text-gray-400">
                         {getDayOfMonth(day.date)}
                       </span>
                       {day.count > 0 && (
-                        <span className="absolute bottom-0.5 right-1 text-xs font-bold text-gray-700 dark:text-gray-300">
+                        <span className="absolute bottom-0.5 right-0.5 sm:right-1 text-xs font-bold text-gray-700 dark:text-gray-300">
                           {day.count}
                         </span>
                       )}
