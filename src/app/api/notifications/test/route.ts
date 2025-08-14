@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   try {
+    // リクエストヘッダーからAuthorizationトークンを取得
+    const authHeader = request.headers.get("authorization");
+
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: "認証トークンがありません" },
+        { status: 401 },
+      );
+    }
+
+    // Supabaseクライアントを作成（サーバーサイド用）
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      },
+    );
+
     // 認証されたユーザーを取得
     const {
       data: { user },

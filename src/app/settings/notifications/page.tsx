@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import MainNavBar from '@/components/MainNavBar';
 import SubHeader from '@/components/Header';
 import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/lib/supabase';
 
 const DAYS_OF_WEEK = [
   { key: 'monday', label: '月' },
@@ -41,10 +42,19 @@ export default function NotificationSettingsPage() {
 
   const sendTestNotification = async () => {
     try {
+      // Supabaseセッションを取得してAuthorizationヘッダーに追加
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        alert('ログインが必要です');
+        return;
+      }
+
       const response = await fetch('/api/notifications/test', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
       
