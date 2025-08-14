@@ -181,7 +181,7 @@ const registerServiceWorker = async (): Promise<void> => {
       console.log("Service Worker update found");
     });
 
-    return registration;
+    // 登録完了
   } catch (error) {
     console.error("Service Worker registration failed:", error);
     throw error;
