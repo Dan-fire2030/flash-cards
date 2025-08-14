@@ -93,12 +93,17 @@ export function useNotifications() {
         timestamp: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("user_fcm_tokens").upsert({
-        user_id: user.id,
-        fcm_token: token,
-        device_info: deviceInfo,
-        is_active: true,
-      });
+      const { error } = await supabase.from("user_fcm_tokens").upsert(
+        {
+          user_id: user.id,
+          fcm_token: token,
+          device_info: deviceInfo,
+          is_active: true,
+        },
+        {
+          onConflict: "fcm_token",
+        },
+      );
 
       if (error) throw error;
       setFcmToken(token);
