@@ -25,7 +25,6 @@ export default function NotificationSettingsPage() {
     fcmToken,
     requestPermission,
     saveSettings,
-    sendTestNotification,
   } = useNotifications();
 
   const [saving, setSaving] = useState(false);
@@ -40,34 +39,6 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  const handleTestNotification = async () => {
-    console.log('Test notification button clicked');
-    
-    if (!fcmToken) {
-      alert('FCMトークンが取得されていません。通知許可を確認してください。');
-      return;
-    }
-
-    if (permissionStatus !== 'granted') {
-      alert('通知が許可されていません。ブラウザの設定を確認してください。');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const success = await sendTestNotification();
-      if (success) {
-        alert('テスト通知を送信しました！通知が表示されない場合は、ブラウザの通知設定を確認してください。');
-      } else {
-        alert('テスト通知の送信に失敗しました。コンソールでエラーを確認してください。');
-      }
-    } catch (error) {
-      console.error('Test notification error:', error);
-      alert(`テスト通知でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleToggle = async (key: keyof typeof settings) => {
     setSaving(true);
@@ -182,12 +153,10 @@ export default function NotificationSettingsPage() {
                     <p className="font-medium text-gray-900 dark:text-white">接続状態</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">通知サービスに接続済み</p>
                   </div>
-                  <button
-                    onClick={handleTestNotification}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    テスト送信
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-sm text-green-600 dark:text-green-400 font-medium">オンライン</span>
+                  </div>
                 </div>
               )}
             </div>

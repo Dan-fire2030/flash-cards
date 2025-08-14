@@ -5,13 +5,12 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compa
 
 // Firebase設定
 const firebaseConfig = {
-  // これらの値は後で環境変数から設定します
-  apiKey: "your-api-key",
-  authDomain: "your-auth-domain",
-  projectId: "your-project-id",
-  storageBucket: "your-storage-bucket",
-  messagingSenderId: "your-messaging-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyAfTRyRzKF6y062eqyIWuzZij6SZRKHIlg",
+  authDomain: "flash-cards-app-7eff2.firebaseapp.com",
+  projectId: "flash-cards-app-7eff2",
+  storageBucket: "flash-cards-app-7eff2.firebasestorage.app",
+  messagingSenderId: "690552633179",
+  appId: "1:690552633179:web:efb9c19023ed4cf399cc7e"
 };
 
 // Firebase初期化
