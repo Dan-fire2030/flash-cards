@@ -15,6 +15,7 @@ export default function TextColorEditor({
 }: TextColorEditorProps) {
   const [selectedColor, setSelectedColor] = useState<"yellow" | "green" | "pink">("yellow");
   const [hasSelection, setHasSelection] = useState(false);
+  const [selectionRange, setSelectionRange] = useState({ start: 0, end: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [plainText, setPlainText] = useState("");
   const [coloredRanges, setColoredRanges] = useState<Array<{
@@ -75,16 +76,60 @@ export default function TextColorEditor({
 
   const checkSelection = () => {
     if (!textareaRef.current) return;
+    
+    // モバイルでの選択範囲取得を確実にする
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
+    
+    // 選択範囲を保存
+    setSelectionRange({ start, end });
     setHasSelection(start !== end);
   };
 
-  const applyColor = () => {
-    if (!textareaRef.current || !hasSelection) return;
+  // タッチイベントとマウスイベントの両方に対応
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // イベントハンドラ
+    const handleSelectionChange = () => {
+      // 少し遅延を入れて選択範囲を確実に取得
+      setTimeout(checkSelection, 50);
+    };
+
+    // デスクトップ向けイベント
+    textarea.addEventListener('select', checkSelection);
+    textarea.addEventListener('mouseup', handleSelectionChange);
+    textarea.addEventListener('keyup', handleSelectionChange);
     
-    const start = textareaRef.current.selectionStart;
-    const end = textareaRef.current.selectionEnd;
+    // モバイル向けイベント
+    textarea.addEventListener('touchend', handleSelectionChange);
+    textarea.addEventListener('selectionchange', handleSelectionChange);
+    
+    // document全体のselectionchangeイベントも監視（iOS Safari対応）
+    const documentSelectionChange = () => {
+      if (document.activeElement === textarea) {
+        handleSelectionChange();
+      }
+    };
+    document.addEventListener('selectionchange', documentSelectionChange);
+
+    return () => {
+      textarea.removeEventListener('select', checkSelection);
+      textarea.removeEventListener('mouseup', handleSelectionChange);
+      textarea.removeEventListener('keyup', handleSelectionChange);
+      textarea.removeEventListener('touchend', handleSelectionChange);
+      textarea.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('selectionchange', documentSelectionChange);
+    };
+  }, []);
+
+  const applyColor = () => {
+    if (!hasSelection) return;
+    
+    // 保存された選択範囲を使用
+    const start = selectionRange.start;
+    const end = selectionRange.end;
     
     if (start === end) return;
 
@@ -117,12 +162,14 @@ export default function TextColorEditor({
     onChange(html);
     
     // 選択を解除
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.setSelectionRange(end, end);
-        setHasSelection(false);
-      }
-    }, 0);
+    setHasSelection(false);
+    setSelectionRange({ start: 0, end: 0 });
+    
+    // テキストエリアのフォーカスを維持
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(end, end);
+    }
   };
 
   const generateHtml = (text: string, ranges: Array<{ start: number; end: number; color: string }>) => {
@@ -210,14 +257,18 @@ export default function TextColorEditor({
 
         <div className="flex-1"></div>
 
-        {/* アクションボタン */}
+        {/* アクションボタン - タッチ対応を改善 */}
         <button
           type="button"
           onClick={applyColor}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            applyColor();
+          }}
           disabled={!hasSelection}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all active:scale-95 ${
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
             hasSelection
-              ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+              ? "bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white"
               : "bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed"
           }`}
         >
@@ -227,11 +278,22 @@ export default function TextColorEditor({
         <button
           type="button"
           onClick={clearFormatting}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 rounded-lg font-medium text-sm transition-all active:scale-95"
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            clearFormatting();
+          }}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:active:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium text-sm transition-all"
         >
           リセット
         </button>
       </div>
+
+      {/* 選択範囲の状態表示（デバッグ用、後で削除可） */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          選択: {hasSelection ? `${selectionRange.start}-${selectionRange.end}` : 'なし'}
+        </div>
+      )}
 
       {/* テキストエリア */}
       <div className="space-y-2">
@@ -242,6 +304,12 @@ export default function TextColorEditor({
           onSelect={checkSelection}
           onMouseUp={checkSelection}
           onKeyUp={checkSelection}
+          onTouchEnd={checkSelection}
+          onFocus={checkSelection}
+          onBlur={() => {
+            // フォーカスが外れても選択範囲を保持
+            setTimeout(checkSelection, 100);
+          }}
           className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
           placeholder={placeholder}
           rows={4}
