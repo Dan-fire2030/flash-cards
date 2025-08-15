@@ -32,13 +32,13 @@ export default function TextColorEditor({
 
   // 初期化時とtext変更時にHTMLをパース
   useEffect(() => {
-    if (text.includes("<span")) {
+    if (text && text.includes("<span")) {
       parseHtmlToRanges(text);
     } else {
-      setPlainText(text);
+      setPlainText(text || "");
       setColoredRanges([]);
     }
-  }, []);
+  }, [text]);
 
   const parseHtmlToRanges = (html: string) => {
     const div = document.createElement("div");

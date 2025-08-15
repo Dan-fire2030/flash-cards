@@ -491,7 +491,16 @@ export default function OfflineStudyPage() {
             {showAnswer && (
               <div className="mt-8 space-y-4">
                 <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded">
-                  <p className="text-xl whitespace-pre-wrap">{currentCard?.back_text}</p>
+                  {currentCard?.back_text && currentCard.back_text.includes('<span') ? (
+                    <div 
+                      className="text-xl whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ 
+                        __html: currentCard.back_text.replace(/\n/g, '<br>') 
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xl whitespace-pre-wrap">{currentCard?.back_text}</p>
+                  )}
                 </div>
                 {currentCard?.back_image_url && (
                   <div className="mt-4">
