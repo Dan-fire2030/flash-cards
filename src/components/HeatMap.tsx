@@ -32,15 +32,23 @@ export default function HeatMap({
     try {
       setLoading(true);
       
-      // 月の最初と最後の日を取得
+      // 月の最初と最後の日を取得（ローカル時間で）
       const firstDay = new Date(year, month - 1, 1);
       const lastDay = new Date(year, month, 0);
+      
+      // ローカル時間で日付文字列を生成
+      const formatLocalDate = (date: Date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      };
       
       const { data: sessions } = await supabase
         .from('study_sessions')
         .select('date, cards_studied')
-        .gte('date', firstDay.toISOString().split('T')[0])
-        .lte('date', lastDay.toISOString().split('T')[0]);
+        .gte('date', formatLocalDate(firstDay))
+        .lte('date', formatLocalDate(lastDay));
 
       const sessionMap = new Map<string, number>();
       let maxCount = 0;
@@ -71,7 +79,7 @@ export default function HeatMap({
       // 月の日付を追加
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const currentDate = new Date(year, month - 1, day);
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr = formatLocalDate(currentDate);
         const count = sessionMap.get(dateStr) || 0;
         const level = maxCount > 0 ? Math.min(4, Math.floor((count / maxCount) * 4)) : 0;
         
@@ -111,8 +119,9 @@ export default function HeatMap({
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
+    // YYYY-MM-DD形式の文字列を直接パース
+    const [, month, day] = dateStr.split('-').map(Number);
+    return `${month}月${day}日`;
   };
 
   const getWeeksData = () => {
@@ -125,8 +134,9 @@ export default function HeatMap({
 
   const getDayOfMonth = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.getDate().toString();
+    // YYYY-MM-DD形式の文字列から日付部分を取得
+    const day = dateStr.split('-')[2];
+    return parseInt(day, 10).toString();
   };
 
   if (loading) {
