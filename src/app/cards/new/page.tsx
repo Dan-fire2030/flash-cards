@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Category } from "@/types";
 import ImageUpload from "@/components/ImageUpload";
+import TextColorEditor from "@/components/TextColorEditor";
 import MainNavBar from "@/components/MainNavBar";
 import SubHeader from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
@@ -260,18 +261,11 @@ export default function NewCardPage() {
                   >
                     裏面（説明）
                   </label>
-                  <div className="relative">
-                    <textarea
-                      id="back"
-                      value={backText}
-                      onChange={(e) => setBackText(e.target.value)}
-                      className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
-                      placeholder="例: りんご、果物の一種"
-                      rows={4}
-                      required
-                    />
-                    <div className="absolute inset-0 rounded-xl ring-2 ring-transparent focus-within:ring-indigo-500/20 transition-all pointer-events-none"></div>
-                  </div>
+                  <TextColorEditor
+                    text={backText}
+                    onChange={setBackText}
+                    placeholder="例: りんご、果物の一種"
+                  />
 
                   {/* 画像アップロード */}
                   <div className="mt-4">
