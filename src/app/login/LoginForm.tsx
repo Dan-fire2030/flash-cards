@@ -103,40 +103,7 @@ export default function LoginForm() {
           </div>
         )}
 
-        {/* 生体認証ボタン */}
-        {biometricSupported && biometricEnabled && (
-          <div className="mb-6">
-            <button
-              onClick={handleBiometricLogin}
-              disabled={loading || biometricLoading}
-              className="w-full py-4 px-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 touch-manipulation active:scale-95 shadow-lg"
-            >
-              <div className="flex items-center justify-center w-8 h-8 bg-white/20 rounded-full">
-                {biometricType.includes('Face') ? (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 14 4.03 17.15 5.65c1.5.77 2.76 1.86 3.75 3.27.16.22.11.54-.12.7-.23.16-.54.11-.7-.12-.9-1.29-2.04-2.25-3.39-2.94-2.87-1.47-6.54-1.47-9.4.01-1.36.7-2.5 1.65-3.4 2.94-.08.14-.23.21-.39.21z"/>
-                  </svg>
-                )}
-              </div>
-              {biometricLoading ? `${biometricType}認証中...` : `${biometricType}でログイン`}
-            </button>
-            
-            <div className="mt-3 text-center">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">または</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* 生体認証ボタンは一時的に無効化（セキュリティ上の理由で、ログイン後のみ生体認証を使用） */}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

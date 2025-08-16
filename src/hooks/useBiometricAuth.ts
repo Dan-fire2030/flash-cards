@@ -165,7 +165,7 @@ export function useBiometricAuth() {
     }
   }, []);
 
-  // 生体認証で認証を実行
+  // 生体認証で認証を実行（ログイン済みユーザー用）
   const authenticate = useCallback(async (): Promise<boolean> => {
     try {
       setState((prev) => ({ ...prev, loading: true, error: null }));
