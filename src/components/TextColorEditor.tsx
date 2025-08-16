@@ -13,7 +13,6 @@ export default function TextColorEditor({
   onChange,
   placeholder = "例: りんご、果物の一種",
 }: TextColorEditorProps) {
-  const [selectedColor, setSelectedColor] = useState<"yellow" | "green" | "pink">("yellow");
   const [hasSelection, setHasSelection] = useState(false);
   const [selectionRange, setSelectionRange] = useState({ start: 0, end: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -77,11 +76,9 @@ export default function TextColorEditor({
   const checkSelection = () => {
     if (!textareaRef.current) return;
     
-    // モバイルでの選択範囲取得を確実にする
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
     
-    // 選択範囲を保存
     setSelectionRange({ start, end });
     setHasSelection(start !== end);
   };
@@ -91,22 +88,16 @@ export default function TextColorEditor({
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // イベントハンドラ
     const handleSelectionChange = () => {
-      // 少し遅延を入れて選択範囲を確実に取得
       setTimeout(checkSelection, 50);
     };
 
-    // デスクトップ向けイベント
     textarea.addEventListener('select', checkSelection);
     textarea.addEventListener('mouseup', handleSelectionChange);
     textarea.addEventListener('keyup', handleSelectionChange);
-    
-    // モバイル向けイベント
     textarea.addEventListener('touchend', handleSelectionChange);
     textarea.addEventListener('selectionchange', handleSelectionChange);
     
-    // document全体のselectionchangeイベントも監視（iOS Safari対応）
     const documentSelectionChange = () => {
       if (document.activeElement === textarea) {
         handleSelectionChange();
@@ -124,30 +115,23 @@ export default function TextColorEditor({
     };
   }, []);
 
-  const applyColor = () => {
+  const applyColor = (color: string) => {
     if (!hasSelection) return;
     
-    // 保存された選択範囲を使用
     const start = selectionRange.start;
     const end = selectionRange.end;
     
     if (start === end) return;
 
-    // 現在のテキストエリアの実際の値を使用（改行を確実に保持）
     const currentText = textareaRef.current?.value || plainText;
-    
-    // プレーンテキストを更新
     setPlainText(currentText);
 
-    // 既存の範囲と新しい範囲をマージ
-    const newRange = { start, end, color: colors[selectedColor].color };
+    const newRange = { start, end, color };
     
-    // 重複する範囲を削除して新しい範囲を追加
     const updatedRanges = coloredRanges.filter(
       range => range.end <= start || range.start >= end
     );
     
-    // 部分的に重複する範囲を分割
     coloredRanges.forEach(range => {
       if (range.start < start && range.end > start && range.end <= end) {
         updatedRanges.push({ ...range, end: start });
@@ -163,15 +147,12 @@ export default function TextColorEditor({
     updatedRanges.sort((a, b) => a.start - b.start);
     setColoredRanges(updatedRanges);
     
-    // HTMLを生成（現在のテキストを使用）
     const html = generateHtml(currentText, updatedRanges);
     onChange(html);
     
-    // 選択を解除
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
     
-    // テキストエリアのフォーカスを維持
     if (textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(end, end);
@@ -205,8 +186,7 @@ export default function TextColorEditor({
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;")
-      .replace(/\n/g, "<br/>");
+      .replace(/'/g, "&#039;");
   };
 
   const clearFormatting = () => {
@@ -218,19 +198,15 @@ export default function TextColorEditor({
     const newText = e.target.value;
     setPlainText(newText);
     
-    // テキスト変更時に色情報を調整
     if (coloredRanges.length > 0) {
-      // 既存の色情報がある場合は、新しいテキスト長に合わせて調整
       const adjustedRanges = coloredRanges.filter(range => 
         range.start < newText.length && range.end <= newText.length
       );
       
-      // さらに、改行数の変化を考慮して範囲を調整
       const oldLineCount = (plainText.match(/\n/g) || []).length;
       const newLineCount = (newText.match(/\n/g) || []).length;
       
       if (oldLineCount !== newLineCount) {
-        // 改行数が変わった場合は範囲をより慎重に調整
         const finalRanges = adjustedRanges.filter(range => {
           const beforeText = newText.substring(0, range.start);
           const selectedText = newText.substring(range.start, range.end);
@@ -238,36 +214,74 @@ export default function TextColorEditor({
         });
         setColoredRanges(finalRanges);
         
-        // 色情報を含むHTMLを生成
         const html = generateHtml(newText, finalRanges);
         onChange(html);
       } else {
         setColoredRanges(adjustedRanges);
         
-        // 色情報を含むHTMLを生成
         const html = generateHtml(newText, adjustedRanges);
         onChange(html);
       }
     } else {
-      // 色情報がない場合は通常のテキストとして処理
       onChange(newText);
     }
   };
 
-  // プレビュー用のHTMLを生成
+  // プレビュー用のコンポーネント
   const renderPreview = () => {
     if (coloredRanges.length === 0) return null;
     
-    const html = generateHtml(plainText, coloredRanges);
-    return (
-      <div 
-        dangerouslySetInnerHTML={{ __html: html }}
-        style={{ 
-          lineHeight: '1.5',
-          wordBreak: 'break-word'
-        }}
-      />
-    );
+    let lastIndex = 0;
+    const elements: JSX.Element[] = [];
+    
+    coloredRanges.forEach((range, index) => {
+      if (range.start > lastIndex) {
+        const beforeText = plainText.substring(lastIndex, range.start);
+        if (beforeText) {
+          elements.push(
+            <span key={`text-${index}`}>
+              {beforeText.split('\n').map((line, lineIndex, lines) => (
+                <span key={lineIndex}>
+                  {line}
+                  {lineIndex < lines.length - 1 && <br />}
+                </span>
+              ))}
+            </span>
+          );
+        }
+      }
+      
+      const coloredText = plainText.substring(range.start, range.end);
+      elements.push(
+        <span key={`colored-${index}`} style={{ color: range.color }}>
+          {coloredText.split('\n').map((line, lineIndex, lines) => (
+            <span key={lineIndex}>
+              {line}
+              {lineIndex < lines.length - 1 && <br />}
+            </span>
+          ))}
+        </span>
+      );
+      lastIndex = range.end;
+    });
+    
+    if (lastIndex < plainText.length) {
+      const afterText = plainText.substring(lastIndex);
+      if (afterText) {
+        elements.push(
+          <span key="text-last">
+            {afterText.split('\n').map((line, lineIndex, lines) => (
+              <span key={lineIndex}>
+                {line}
+                {lineIndex < lines.length - 1 && <br />}
+              </span>
+            ))}
+          </span>
+        );
+      }
+    }
+    
+    return <div>{elements}</div>;
   };
 
   return (
@@ -276,20 +290,17 @@ export default function TextColorEditor({
       <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
         {/* カラーセレクター */}
         <div className="flex gap-1">
-          {(Object.keys(colors) as Array<keyof typeof colors>).map((color) => (
+          {(Object.keys(colors) as Array<keyof typeof colors>).map((colorKey) => (
             <button
-              key={color}
+              key={colorKey}
               type="button"
-              onClick={() => setSelectedColor(color)}
-              className={`w-10 h-10 rounded-lg ${colors[color].buttonBg} flex items-center justify-center transition-all border-2 ${
-                selectedColor === color
-                  ? "border-gray-800 dark:border-white scale-110 shadow-lg"
-                  : "border-transparent hover:scale-105"
-              }`}
-              aria-label={`${colors[color].label}色`}
+              onClick={() => applyColor(colors[colorKey].color)}
+              disabled={!hasSelection}
+              className={`w-10 h-10 rounded-lg ${colors[colorKey].buttonBg} flex items-center justify-center transition-all border-2 border-transparent hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100`}
+              aria-label={`${colors[colorKey].label}色を適用`}
             >
               <span className="font-bold text-sm text-white">
-                {colors[color].label}
+                {colors[colorKey].label}
               </span>
             </button>
           ))}
@@ -297,38 +308,16 @@ export default function TextColorEditor({
 
         <div className="flex-1"></div>
 
-        {/* アクションボタン - タッチ対応を改善 */}
-        <button
-          type="button"
-          onClick={applyColor}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            applyColor();
-          }}
-          disabled={!hasSelection}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-            hasSelection
-              ? "bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white"
-              : "bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          色変更
-        </button>
-
         <button
           type="button"
           onClick={clearFormatting}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            clearFormatting();
-          }}
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 dark:active:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium text-sm transition-all"
         >
           リセット
         </button>
       </div>
 
-      {/* 選択範囲の状態表示（デバッグ用、後で削除可） */}
+      {/* 選択範囲の状態表示（デバッグ用） */}
       {process.env.NODE_ENV === 'development' && (
         <div className="text-xs text-gray-500 dark:text-gray-400">
           選択: {hasSelection ? `${selectionRange.start}-${selectionRange.end}` : 'なし'}
@@ -347,7 +336,6 @@ export default function TextColorEditor({
           onTouchEnd={checkSelection}
           onFocus={checkSelection}
           onBlur={() => {
-            // フォーカスが外れても選択範囲を保持
             setTimeout(checkSelection, 100);
           }}
           className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
