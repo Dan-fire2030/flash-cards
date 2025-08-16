@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 interface TextColorEditorProps {
   text: string;
@@ -22,6 +22,7 @@ export default function TextColorEditor({
     end: number;
     color: string;
   }>>([]);
+  const [isClient, setIsClient] = useState(false);
 
   const colors = {
     yellow: { color: "#ca8a04", label: "黄", buttonBg: "bg-yellow-400" },
@@ -29,17 +30,26 @@ export default function TextColorEditor({
     pink: { color: "#db2777", label: "桃", buttonBg: "bg-pink-400" },
   };
 
+  // Client-side hydration check
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // 初期化時とtext変更時にHTMLをパース
   useEffect(() => {
+    if (!isClient) return; // Skip on server-side
+    
     if (text && text.includes("<span")) {
       parseHtmlToRanges(text);
     } else {
       setPlainText(text || "");
       setColoredRanges([]);
     }
-  }, [text]);
+  }, [text, isClient]);
 
   const parseHtmlToRanges = (html: string) => {
+    if (typeof window === 'undefined') return; // Skip on server-side
+    
     const div = document.createElement("div");
     div.innerHTML = html;
     const plain = div.textContent || "";
@@ -85,6 +95,8 @@ export default function TextColorEditor({
 
   // タッチイベントとマウスイベントの両方に対応
   useEffect(() => {
+    if (!isClient) return; // Skip on server-side
+    
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -113,7 +125,7 @@ export default function TextColorEditor({
       textarea.removeEventListener('selectionchange', handleSelectionChange);
       document.removeEventListener('selectionchange', documentSelectionChange);
     };
-  }, []);
+  }, [isClient]);
 
   const applyColor = (color: string) => {
     if (!hasSelection) return;
@@ -226,10 +238,10 @@ export default function TextColorEditor({
 
   // プレビュー用のコンポーネント（改行を確実に表示）
   const renderPreview = () => {
-    if (coloredRanges.length === 0) return null;
+    if (!isClient || coloredRanges.length === 0) return null;
     
     let lastIndex = 0;
-    const elements: JSX.Element[] = [];
+    const elements: React.ReactElement[] = [];
     
     coloredRanges.forEach((range, index) => {
       // 前のテキスト部分
