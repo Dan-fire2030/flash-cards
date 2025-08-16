@@ -1,12 +1,71 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 
 interface TextColorEditorProps {
   text: string;
   onChange: (text: string) => void;
   placeholder?: string;
 }
+
+// テキストエリアを分離してメモ化（DOM値保持特化版）
+const MemoizedTextarea = memo(function MemoizedTextarea({ 
+  textareaRef, 
+  handleTextChange, 
+  checkSelection, 
+  placeholder 
+}: {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  handleTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  checkSelection: () => void;
+  placeholder: string;
+}) {
+  const handleChangeWithPreservation = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // 変更時のカーソル位置とスクロール位置を保存
+    const target = e.target as HTMLTextAreaElement;
+    const selectionStart = target.selectionStart;
+    const selectionEnd = target.selectionEnd;
+    const scrollTop = target.scrollTop;
+    const scrollLeft = target.scrollLeft;
+    
+    handleTextChange(e);
+    
+    // DOM状態を次のフレームで復元
+    requestAnimationFrame(() => {
+      if (target && document.contains(target)) {
+        target.setSelectionRange(selectionStart, selectionEnd);
+        target.scrollTop = scrollTop;
+        target.scrollLeft = scrollLeft;
+      }
+    });
+  }, [handleTextChange]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      defaultValue=""
+      onChange={handleChangeWithPreservation}
+      onSelect={checkSelection}
+      onMouseUp={checkSelection}
+      onKeyUp={checkSelection}
+      onTouchEnd={checkSelection}
+      onFocus={checkSelection}
+      onBlur={() => {
+        setTimeout(checkSelection, 100);
+      }}
+      className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
+      placeholder={placeholder}
+      rows={4}
+      required
+      style={{ 
+        whiteSpace: 'pre-wrap', 
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word',
+        lineHeight: '1.5'
+      }}
+    />
+  );
+});
 
 export default function TextColorEditor({
   text,
@@ -93,7 +152,7 @@ export default function TextColorEditor({
     setColoredRanges(ranges);
   };
 
-  const checkSelection = () => {
+  const checkSelection = useCallback(() => {
     if (!textareaRef.current) return;
     
     const start = textareaRef.current.selectionStart;
@@ -101,7 +160,7 @@ export default function TextColorEditor({
     
     setSelectionRange({ start, end });
     setHasSelection(start !== end);
-  };
+  }, []);
 
   // タッチイベントとマウスイベントの両方に対応
   useEffect(() => {
@@ -137,7 +196,7 @@ export default function TextColorEditor({
     };
   }, [isClient]);
 
-  const applyColor = (color: string) => {
+  const applyColor = useCallback((color: string) => {
     if (!hasSelection || !textareaRef.current) return;
     
     const start = selectionRange.start;
@@ -145,8 +204,11 @@ export default function TextColorEditor({
     
     if (start === end) return;
 
-    // 現在のテキストエリアの値を取得（DOMから直接）
-    const currentText = textareaRef.current.value;
+    // 現在のテキストエリアの値とスクロール位置を保存
+    const textarea = textareaRef.current;
+    const currentText = textarea.value;
+    const scrollTop = textarea.scrollTop;
+    const scrollLeft = textarea.scrollLeft;
     
     const newRange = { start, end, color };
     
@@ -168,25 +230,29 @@ export default function TextColorEditor({
     updatedRanges.push(newRange);
     updatedRanges.sort((a, b) => a.start - b.start);
     
-    // 状態更新（React re-renderを最小限に）
-    setColoredRanges(updatedRanges);
-    
     // HTMLを生成（改行を維持）
     const html = generateHtml(currentText, updatedRanges);
-    onChange(html);
     
     // 選択状態をクリア
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
     
-    // カーソル位置を復元
-    setTimeout(() => {
+    // 状態更新を即座に行い、DOMの値は変更しない
+    setColoredRanges(updatedRanges);
+    onChange(html);
+    
+    // DOMの状態を完全に保持（React の影響を無効化）
+    requestAnimationFrame(() => {
       if (textareaRef.current) {
+        // テキストエリアの値を明示的に元の値に復元
+        textareaRef.current.value = currentText;
+        textareaRef.current.scrollTop = scrollTop;
+        textareaRef.current.scrollLeft = scrollLeft;
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(end, end);
       }
-    }, 10);
-  };
+    });
+  }, [hasSelection, selectionRange, coloredRanges, onChange]);
 
   const generateHtml = (text: string, ranges: Array<{ start: number; end: number; color: string }>) => {
     if (ranges.length === 0) return text;
@@ -225,7 +291,7 @@ export default function TextColorEditor({
     onChange(currentText);
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     
     if (coloredRanges.length > 0) {
@@ -240,7 +306,7 @@ export default function TextColorEditor({
     } else {
       onChange(newText);
     }
-  };
+  }, [coloredRanges, onChange]);
 
   // プレビュー用のコンポーネント（改行を確実に表示）
   const renderPreview = () => {
@@ -345,28 +411,11 @@ export default function TextColorEditor({
 
       {/* テキストエリア */}
       <div className="space-y-2">
-        <textarea
-          ref={textareaRef}
-          defaultValue=""
-          onChange={handleTextChange}
-          onSelect={checkSelection}
-          onMouseUp={checkSelection}
-          onKeyUp={checkSelection}
-          onTouchEnd={checkSelection}
-          onFocus={checkSelection}
-          onBlur={() => {
-            setTimeout(checkSelection, 100);
-          }}
-          className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
+        <MemoizedTextarea
+          textareaRef={textareaRef}
+          handleTextChange={handleTextChange}
+          checkSelection={checkSelection}
           placeholder={placeholder}
-          rows={4}
-          required
-          style={{ 
-            whiteSpace: 'pre-wrap', 
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-            lineHeight: '1.5'
-          }}
         />
         
         {/* プレビュー */}
