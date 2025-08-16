@@ -16,13 +16,14 @@ export default function TextColorEditor({
   const [hasSelection, setHasSelection] = useState(false);
   const [selectionRange, setSelectionRange] = useState({ start: 0, end: 0 });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [plainText, setPlainText] = useState("");
   const [coloredRanges, setColoredRanges] = useState<Array<{
     start: number;
     end: number;
     color: string;
   }>>([]);
   const [isClient, setIsClient] = useState(false);
+  
+  // 非制御入力として管理するため、plainText状態を削除
 
   const colors = {
     yellow: { color: "#ca8a04", label: "黄", buttonBg: "bg-yellow-400" },
@@ -35,24 +36,19 @@ export default function TextColorEditor({
     setIsClient(true);
   }, []);
 
-  // 初期化時とtext変更時にHTMLをパース
+  // 初期化時とtext変更時にHTMLをパース（非制御入力アプローチ）
   useEffect(() => {
     if (!isClient) return; // Skip on server-side
     
     if (text && text.includes("<span")) {
       parseHtmlToRanges(text);
     } else {
-      const newPlainText = text || "";
-      
-      // まず状態を更新
-      setPlainText(newPlainText);
+      const plainText = text || "";
       setColoredRanges([]);
       
-      // その後DOMを同期（改行保持のため）
-      if (textareaRef.current && textareaRef.current.value !== newPlainText) {
-        const savedScrollTop = textareaRef.current.scrollTop;
-        textareaRef.current.value = newPlainText;
-        textareaRef.current.scrollTop = savedScrollTop;
+      // テキストエリアに直接値を設定（Reactは関与せず）
+      if (textareaRef.current) {
+        textareaRef.current.value = plainText;
       }
     }
   }, [text, isClient]);
@@ -63,19 +59,10 @@ export default function TextColorEditor({
     const div = document.createElement("div");
     div.innerHTML = html;
     const plain = div.textContent || "";
-    
-    // 状態を更新
-    setPlainText(plain);
 
-    // DOMも同期（改行保持のため）
-    if (textareaRef.current && textareaRef.current.value !== plain) {
-      const savedScrollTop = textareaRef.current.scrollTop;
-      const savedSelectionStart = textareaRef.current.selectionStart;
-      const savedSelectionEnd = textareaRef.current.selectionEnd;
-      
+    // テキストエリアに直接値を設定（改行保持）
+    if (textareaRef.current) {
       textareaRef.current.value = plain;
-      textareaRef.current.scrollTop = savedScrollTop;
-      textareaRef.current.setSelectionRange(savedSelectionStart, savedSelectionEnd);
     }
 
     const ranges: Array<{ start: number; end: number; color: string }> = [];
@@ -151,17 +138,16 @@ export default function TextColorEditor({
   }, [isClient]);
 
   const applyColor = (color: string) => {
-    if (!hasSelection) return;
+    if (!hasSelection || !textareaRef.current) return;
     
     const start = selectionRange.start;
     const end = selectionRange.end;
     
     if (start === end) return;
 
-    // 現在のテキストエリアの値を保存（改行を確実に保持）
-    const currentText = textareaRef.current?.value || plainText;
-    const savedScrollTop = textareaRef.current?.scrollTop || 0;
-
+    // 現在のテキストエリアの値を取得（DOMから直接）
+    const currentText = textareaRef.current.value;
+    
     const newRange = { start, end, color };
     
     const updatedRanges = coloredRanges.filter(
@@ -182,26 +168,24 @@ export default function TextColorEditor({
     updatedRanges.push(newRange);
     updatedRanges.sort((a, b) => a.start - b.start);
     
-    // 状態更新を後で実行し、DOMを先に修正
+    // 状態更新（React re-renderを最小限に）
+    setColoredRanges(updatedRanges);
+    
+    // HTMLを生成（改行を維持）
+    const html = generateHtml(currentText, updatedRanges);
+    onChange(html);
+    
+    // 選択状態をクリア
+    setHasSelection(false);
+    setSelectionRange({ start: 0, end: 0 });
+    
+    // カーソル位置を復元
     setTimeout(() => {
-      setPlainText(currentText);
-      setColoredRanges(updatedRanges);
-      
-      // HTMLを生成（改行を維持）
-      const html = generateHtml(currentText, updatedRanges);
-      onChange(html);
-      
-      // テキストエリアの状態を復元
       if (textareaRef.current) {
-        textareaRef.current.value = currentText;
-        textareaRef.current.scrollTop = savedScrollTop;
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(end, end);
       }
-    }, 0);
-    
-    setHasSelection(false);
-    setSelectionRange({ start: 0, end: 0 });
+    }, 10);
   };
 
   const generateHtml = (text: string, ranges: Array<{ start: number; end: number; color: string }>) => {
@@ -237,14 +221,12 @@ export default function TextColorEditor({
 
   const clearFormatting = () => {
     setColoredRanges([]);
-    onChange(plainText);
+    const currentText = textareaRef.current?.value || "";
+    onChange(currentText);
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    
-    // テキストを即座に状態に反映
-    setPlainText(newText);
     
     if (coloredRanges.length > 0) {
       // 色情報がある場合は範囲を調整
@@ -262,15 +244,16 @@ export default function TextColorEditor({
 
   // プレビュー用のコンポーネント（改行を確実に表示）
   const renderPreview = () => {
-    if (!isClient || coloredRanges.length === 0) return null;
+    if (!isClient || coloredRanges.length === 0 || !textareaRef.current) return null;
     
+    const currentText = textareaRef.current.value;
     let lastIndex = 0;
     const elements: React.ReactElement[] = [];
     
     coloredRanges.forEach((range, index) => {
       // 前のテキスト部分
       if (range.start > lastIndex) {
-        const beforeText = plainText.substring(lastIndex, range.start);
+        const beforeText = currentText.substring(lastIndex, range.start);
         if (beforeText) {
           elements.push(
             <span key={`text-${index}`}>
@@ -286,7 +269,7 @@ export default function TextColorEditor({
       }
       
       // 色付きテキスト部分
-      const coloredText = plainText.substring(range.start, range.end);
+      const coloredText = currentText.substring(range.start, range.end);
       elements.push(
         <span key={`colored-${index}`} style={{ color: range.color }}>
           {coloredText.split('\n').map((line, lineIndex, lines) => (
@@ -301,8 +284,8 @@ export default function TextColorEditor({
     });
     
     // 残りのテキスト部分
-    if (lastIndex < plainText.length) {
-      const afterText = plainText.substring(lastIndex);
+    if (lastIndex < currentText.length) {
+      const afterText = currentText.substring(lastIndex);
       if (afterText) {
         elements.push(
           <span key="text-last">
@@ -364,7 +347,7 @@ export default function TextColorEditor({
       <div className="space-y-2">
         <textarea
           ref={textareaRef}
-          value={plainText}
+          defaultValue=""
           onChange={handleTextChange}
           onSelect={checkSelection}
           onMouseUp={checkSelection}
