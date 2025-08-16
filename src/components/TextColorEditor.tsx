@@ -212,9 +212,21 @@ export default function TextColorEditor({
     const newText = e.target.value;
     setPlainText(newText);
     
-    // テキスト変更時は色情報をクリア（シンプルな実装）
-    setColoredRanges([]);
-    onChange(newText);
+    // テキスト変更時に色情報を調整
+    if (coloredRanges.length > 0) {
+      // 既存の色情報がある場合は、新しいテキスト長に合わせて調整
+      const adjustedRanges = coloredRanges.filter(range => 
+        range.start < newText.length && range.end <= newText.length
+      );
+      setColoredRanges(adjustedRanges);
+      
+      // 色情報を含むHTMLを生成
+      const html = generateHtml(newText, adjustedRanges);
+      onChange(html);
+    } else {
+      // 色情報がない場合は通常のテキストとして処理
+      onChange(newText);
+    }
   };
 
   // プレビュー用のHTMLを生成

@@ -19,6 +19,32 @@ export default function Home() {
 
   useEffect(() => {
     loadStats();
+    
+    // ページがフォーカスされた時に統計を再読み込み
+    const handleFocus = () => {
+      loadStats();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // ページが表示される度に統計を更新
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadStats();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loadStats = async () => {
