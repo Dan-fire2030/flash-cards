@@ -236,14 +236,14 @@ export default function NotificationSettingsPage() {
                 <>
                   {/* 通知時間設定 */}
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white mb-3">通知時間</p>
+                    <p className="font-medium text-gray-900 dark:text-white mb-3 text-sm sm:text-base">通知時間</p>
                     <div className="space-y-3">
                       {settings.study_reminder_times.map((time, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <span className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">{time}</span>
+                        <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 sm:p-3">
+                          <span className="text-sm sm:text-base font-medium text-gray-900 dark:text-white">{time}</span>
                           <button
                             onClick={() => removeReminderTime(time)}
-                            className="text-red-600 hover:text-red-700"
+                            className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                             disabled={saving}
                           >
                             削除
@@ -251,19 +251,21 @@ export default function NotificationSettingsPage() {
                         </div>
                       ))}
                       
-                      <div className="flex items-center gap-3">
+                      {/* スマホ用縦並びレイアウト */}
+                      <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3">
                         <input
                           type="time"
                           value={newReminderTime}
                           onChange={(e) => setNewReminderTime(e.target.value)}
-                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                          className="w-full sm:w-auto px-3 py-2.5 sm:py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="時間を選択"
                         />
                         <button
                           onClick={addReminderTime}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 text-white text-sm sm:text-base font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={!newReminderTime || saving}
                         >
-                          追加
+                          時間を追加
                         </button>
                       </div>
                     </div>
@@ -271,18 +273,18 @@ export default function NotificationSettingsPage() {
 
                   {/* 曜日設定 */}
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white mb-3">通知する曜日</p>
-                    <div className="flex flex-wrap gap-2">
+                    <p className="font-medium text-gray-900 dark:text-white mb-3 text-sm sm:text-base">通知する曜日</p>
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                       {DAYS_OF_WEEK.map((day) => (
                         <button
                           key={day.key}
                           onClick={() => toggleDay(day.key)}
                           disabled={saving}
-                          className={`px-4 py-2 rounded-lg transition-colors ${
+                          className={`aspect-square flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-colors ${
                             settings.study_reminder_days.includes(day.key)
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-                          }`}
+                              ? 'bg-indigo-600 text-white shadow-sm'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           {day.label}
                         </button>
@@ -317,9 +319,9 @@ export default function NotificationSettingsPage() {
               </div>
 
               {settings.goal_notifications_enabled && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:space-y-0">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1.5 sm:mb-2">
                       1日の目標カード数
                     </label>
                     <input
@@ -328,13 +330,13 @@ export default function NotificationSettingsPage() {
                       max="100"
                       value={settings.daily_goal_cards}
                       onChange={(e) => handleNumberChange('daily_goal_cards', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       disabled={saving}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1.5 sm:mb-2">
                       週間目標学習日数
                     </label>
                     <input
@@ -343,13 +345,13 @@ export default function NotificationSettingsPage() {
                       max="7"
                       value={settings.weekly_goal_days}
                       onChange={(e) => handleNumberChange('weekly_goal_days', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       disabled={saving}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white mb-1.5 sm:mb-2">
                       目標正答率 (%)
                     </label>
                     <input
@@ -358,7 +360,7 @@ export default function NotificationSettingsPage() {
                       max="100"
                       value={settings.accuracy_goal_percentage}
                       onChange={(e) => handleNumberChange('accuracy_goal_percentage', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       disabled={saving}
                     />
                   </div>
