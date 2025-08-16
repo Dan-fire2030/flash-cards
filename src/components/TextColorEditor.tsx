@@ -123,7 +123,10 @@ export default function TextColorEditor({
     
     if (start === end) return;
 
+    // 現在のテキストエリアの値を取得（改行を確実に保持）
     const currentText = textareaRef.current?.value || plainText;
+    
+    // プレーンテキストを更新（重要：これにより改行が保持される）
     setPlainText(currentText);
 
     const newRange = { start, end, color };
@@ -147,13 +150,16 @@ export default function TextColorEditor({
     updatedRanges.sort((a, b) => a.start - b.start);
     setColoredRanges(updatedRanges);
     
+    // HTMLを生成（改行を維持）
     const html = generateHtml(currentText, updatedRanges);
     onChange(html);
     
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
     
+    // テキストエリアを更新して改行を確実に表示
     if (textareaRef.current) {
+      textareaRef.current.value = currentText;
       textareaRef.current.focus();
       textareaRef.current.setSelectionRange(end, end);
     }
@@ -186,12 +192,18 @@ export default function TextColorEditor({
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/'/g, "&#039;")
+      .replace(/\n/g, "<br/>");
   };
 
   const clearFormatting = () => {
     setColoredRanges([]);
     onChange(plainText);
+    
+    // テキストエリアも確実に更新
+    if (textareaRef.current) {
+      textareaRef.current.value = plainText;
+    }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -199,35 +211,20 @@ export default function TextColorEditor({
     setPlainText(newText);
     
     if (coloredRanges.length > 0) {
+      // 色情報がある場合は範囲を調整
       const adjustedRanges = coloredRanges.filter(range => 
         range.start < newText.length && range.end <= newText.length
       );
+      setColoredRanges(adjustedRanges);
       
-      const oldLineCount = (plainText.match(/\n/g) || []).length;
-      const newLineCount = (newText.match(/\n/g) || []).length;
-      
-      if (oldLineCount !== newLineCount) {
-        const finalRanges = adjustedRanges.filter(range => {
-          const beforeText = newText.substring(0, range.start);
-          const selectedText = newText.substring(range.start, range.end);
-          return beforeText.length === range.start && selectedText.length === (range.end - range.start);
-        });
-        setColoredRanges(finalRanges);
-        
-        const html = generateHtml(newText, finalRanges);
-        onChange(html);
-      } else {
-        setColoredRanges(adjustedRanges);
-        
-        const html = generateHtml(newText, adjustedRanges);
-        onChange(html);
-      }
+      const html = generateHtml(newText, adjustedRanges);
+      onChange(html);
     } else {
       onChange(newText);
     }
   };
 
-  // プレビュー用のコンポーネント
+  // プレビュー用のコンポーネント（改行を確実に表示）
   const renderPreview = () => {
     if (coloredRanges.length === 0) return null;
     
@@ -235,6 +232,7 @@ export default function TextColorEditor({
     const elements: JSX.Element[] = [];
     
     coloredRanges.forEach((range, index) => {
+      // 前のテキスト部分
       if (range.start > lastIndex) {
         const beforeText = plainText.substring(lastIndex, range.start);
         if (beforeText) {
@@ -251,6 +249,7 @@ export default function TextColorEditor({
         }
       }
       
+      // 色付きテキスト部分
       const coloredText = plainText.substring(range.start, range.end);
       elements.push(
         <span key={`colored-${index}`} style={{ color: range.color }}>
@@ -265,6 +264,7 @@ export default function TextColorEditor({
       lastIndex = range.end;
     });
     
+    // 残りのテキスト部分
     if (lastIndex < plainText.length) {
       const afterText = plainText.substring(lastIndex);
       if (afterText) {
@@ -281,7 +281,7 @@ export default function TextColorEditor({
       }
     }
     
-    return <div>{elements}</div>;
+    return <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{elements}</div>;
   };
 
   return (
@@ -342,6 +342,7 @@ export default function TextColorEditor({
           placeholder={placeholder}
           rows={4}
           required
+          style={{ whiteSpace: 'pre-wrap' }}
         />
         
         {/* プレビュー */}
