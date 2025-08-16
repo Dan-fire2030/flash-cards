@@ -1,76 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, memo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 interface TextColorEditorProps {
   text: string;
   onChange: (text: string) => void;
   placeholder?: string;
 }
-
-// テキストエリアを分離してメモ化（DOM値保持特化版）
-const MemoizedTextarea = memo(function MemoizedTextarea({ 
-  textareaRef, 
-  handleTextChange, 
-  checkSelection, 
-  placeholder 
-}: {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  handleTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  checkSelection: () => void;
-  placeholder: string;
-}) {
-  const handleChangeWithPreservation = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // 変更時のカーソル位置とスクロール位置を保存
-    const target = e.target as HTMLTextAreaElement;
-    const currentValue = target.value;
-    const selectionStart = target.selectionStart;
-    const selectionEnd = target.selectionEnd;
-    const scrollTop = target.scrollTop;
-    const scrollLeft = target.scrollLeft;
-    
-    handleTextChange(e);
-    
-    // DOM状態を次のフレームで復元（値も含めて）
-    requestAnimationFrame(() => {
-      if (target && document.contains(target)) {
-        // Reactの再レンダリングで値が変わる場合があるので、値を復元
-        if (target.value !== currentValue) {
-          target.value = currentValue;
-        }
-        target.setSelectionRange(selectionStart, selectionEnd);
-        target.scrollTop = scrollTop;
-        target.scrollLeft = scrollLeft;
-      }
-    });
-  }, [handleTextChange]);
-
-  return (
-    <textarea
-      ref={textareaRef}
-      defaultValue=""
-      onChange={handleChangeWithPreservation}
-      onSelect={checkSelection}
-      onMouseUp={checkSelection}
-      onKeyUp={checkSelection}
-      onTouchEnd={checkSelection}
-      onFocus={checkSelection}
-      onBlur={() => {
-        setTimeout(checkSelection, 100);
-      }}
-      className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
-      placeholder={placeholder}
-      rows={4}
-      required
-      style={{ 
-        whiteSpace: 'pre-wrap', 
-        wordWrap: 'break-word',
-        overflowWrap: 'break-word',
-        lineHeight: '1.5'
-      }}
-    />
-  );
-});
 
 export default function TextColorEditor({
   text,
@@ -86,8 +22,8 @@ export default function TextColorEditor({
     color: string;
   }>>([]);
   const [isClient, setIsClient] = useState(false);
-  
-  // 非制御入力として管理するため、plainText状態を削除
+  const [textValue, setTextValue] = useState("");
+  const isInternalUpdate = useRef(false);
 
   const colors = {
     yellow: { color: "#ca8a04", label: "黄", buttonBg: "bg-yellow-400" },
@@ -100,36 +36,28 @@ export default function TextColorEditor({
     setIsClient(true);
   }, []);
 
-  // 初期化時とtext変更時にHTMLをパース（非制御入力アプローチ）
+  // 初期化時とtext変更時にHTMLをパース
   useEffect(() => {
-    if (!isClient) return; // Skip on server-side
+    if (!isClient) return;
     
     if (text && text.includes("<span")) {
       parseHtmlToRanges(text);
     } else {
       const plainText = text || "";
+      setTextValue(plainText);
       setColoredRanges([]);
-      
-      // テキストエリアに直接値を設定（Reactは関与せず）
-      if (textareaRef.current) {
-        textareaRef.current.value = plainText;
-        textareaRef.current.dataset.prevValue = plainText;
-      }
     }
   }, [text, isClient]);
 
   const parseHtmlToRanges = (html: string) => {
-    if (typeof window === 'undefined') return; // Skip on server-side
+    if (typeof window === 'undefined') return;
     
     const div = document.createElement("div");
-    div.innerHTML = html;
+    // <br/>を改行に変換
+    div.innerHTML = html.replace(/<br\s*\/?>/gi, '\n');
     const plain = div.textContent || "";
-
-    // テキストエリアに直接値を設定（改行保持）
-    if (textareaRef.current) {
-      textareaRef.current.value = plain;
-      textareaRef.current.dataset.prevValue = plain;
-    }
+    
+    setTextValue(plain);
 
     const ranges: Array<{ start: number; end: number; color: string }> = [];
     let currentIndex = 0;
@@ -171,7 +99,7 @@ export default function TextColorEditor({
 
   // タッチイベントとマウスイベントの両方に対応
   useEffect(() => {
-    if (!isClient) return; // Skip on server-side
+    if (!isClient) return;
     
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -184,7 +112,6 @@ export default function TextColorEditor({
     textarea.addEventListener('mouseup', handleSelectionChange);
     textarea.addEventListener('keyup', handleSelectionChange);
     textarea.addEventListener('touchend', handleSelectionChange);
-    textarea.addEventListener('selectionchange', handleSelectionChange);
     
     const documentSelectionChange = () => {
       if (document.activeElement === textarea) {
@@ -198,10 +125,9 @@ export default function TextColorEditor({
       textarea.removeEventListener('mouseup', handleSelectionChange);
       textarea.removeEventListener('keyup', handleSelectionChange);
       textarea.removeEventListener('touchend', handleSelectionChange);
-      textarea.removeEventListener('selectionchange', handleSelectionChange);
       document.removeEventListener('selectionchange', documentSelectionChange);
     };
-  }, [isClient]);
+  }, [isClient, checkSelection]);
 
   const applyColor = useCallback((color: string) => {
     if (!hasSelection || !textareaRef.current) return;
@@ -211,14 +137,10 @@ export default function TextColorEditor({
     
     if (start === end) return;
 
-    // 現在のテキストエリアの値とスクロール位置を保存
-    const textarea = textareaRef.current;
-    const currentText = textarea.value;
-    const scrollTop = textarea.scrollTop;
-    const scrollLeft = textarea.scrollLeft;
-    
+    const currentText = textValue;
     const newRange = { start, end, color };
     
+    // 既存の範囲と新しい範囲を統合
     const updatedRanges = coloredRanges.filter(
       range => range.end <= start || range.start >= end
     );
@@ -237,29 +159,26 @@ export default function TextColorEditor({
     updatedRanges.push(newRange);
     updatedRanges.sort((a, b) => a.start - b.start);
     
-    // HTMLを生成（改行を維持）
+    // HTMLを生成
     const html = generateHtml(currentText, updatedRanges);
+    
+    // 状態更新
+    setColoredRanges(updatedRanges);
+    isInternalUpdate.current = true;
+    onChange(html);
     
     // 選択状態をクリア
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
     
-    // 状態更新を即座に行い、DOMの値は変更しない
-    setColoredRanges(updatedRanges);
-    onChange(html);
-    
-    // DOMの状態を完全に保持（React の影響を無効化）
-    requestAnimationFrame(() => {
+    // カーソル位置を設定
+    setTimeout(() => {
       if (textareaRef.current) {
-        // テキストエリアの値を明示的に元の値に復元
-        textareaRef.current.value = currentText;
-        textareaRef.current.scrollTop = scrollTop;
-        textareaRef.current.scrollLeft = scrollLeft;
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(end, end);
       }
-    });
-  }, [hasSelection, selectionRange, coloredRanges, onChange]);
+    }, 0);
+  }, [hasSelection, selectionRange, coloredRanges, textValue, onChange]);
 
   const generateHtml = (text: string, ranges: Array<{ start: number; end: number; color: string }>) => {
     if (ranges.length === 0) return text;
@@ -294,47 +213,51 @@ export default function TextColorEditor({
 
   const clearFormatting = () => {
     setColoredRanges([]);
-    const currentText = textareaRef.current?.value || "";
-    onChange(currentText);
+    onChange(textValue);
   };
 
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    const oldText = textareaRef.current?.dataset.prevValue || "";
+    const oldText = textValue;
+    
+    setTextValue(newText);
     
     // テキストの差分を計算して範囲を調整
     if (coloredRanges.length > 0) {
+      const selStart = e.target.selectionStart;
+      const changeStart = selStart;
+      let changeEnd = selStart;
       const lengthDiff = newText.length - oldText.length;
-      let changeIndex = 0;
       
-      // 変更位置を特定
-      for (let i = 0; i < Math.min(oldText.length, newText.length); i++) {
-        if (oldText[i] !== newText[i]) {
-          changeIndex = i;
-          break;
-        }
+      // 削除の場合
+      if (lengthDiff < 0) {
+        changeEnd = selStart - lengthDiff;
       }
       
       // 範囲を調整
       const adjustedRanges = coloredRanges.map(range => {
-        if (range.end <= changeIndex) {
+        if (range.end <= changeStart) {
           // 変更位置より前の範囲はそのまま
           return range;
-        } else if (range.start >= changeIndex) {
+        } else if (range.start >= changeEnd) {
           // 変更位置より後の範囲は位置をシフト
           return {
             ...range,
             start: range.start + lengthDiff,
             end: range.end + lengthDiff
           };
-        } else {
+        } else if (range.start < changeStart && range.end > changeEnd) {
           // 変更位置を含む範囲は調整
           return {
             ...range,
             end: range.end + lengthDiff
           };
+        } else {
+          // 変更により削除される範囲
+          return null;
         }
-      }).filter(range => 
+      }).filter((range): range is { start: number; end: number; color: string } => 
+        range !== null && 
         range.start >= 0 && 
         range.end > range.start && 
         range.end <= newText.length
@@ -346,18 +269,13 @@ export default function TextColorEditor({
     } else {
       onChange(newText);
     }
-    
-    // 次回の比較のために現在の値を保存
-    if (textareaRef.current) {
-      textareaRef.current.dataset.prevValue = newText;
-    }
-  }, [coloredRanges, onChange]);
+  }, [textValue, coloredRanges, onChange]);
 
-  // プレビュー用のコンポーネント（改行を確実に表示）
+  // プレビュー用のコンポーネント
   const renderPreview = () => {
-    if (!isClient || coloredRanges.length === 0 || !textareaRef.current) return null;
+    if (!isClient || coloredRanges.length === 0) return null;
     
-    const currentText = textareaRef.current.value;
+    const currentText = textValue;
     let lastIndex = 0;
     const elements: React.ReactElement[] = [];
     
@@ -456,11 +374,28 @@ export default function TextColorEditor({
 
       {/* テキストエリア */}
       <div className="space-y-2">
-        <MemoizedTextarea
-          textareaRef={textareaRef}
-          handleTextChange={handleTextChange}
-          checkSelection={checkSelection}
+        <textarea
+          ref={textareaRef}
+          value={textValue}
+          onChange={handleTextChange}
+          onSelect={checkSelection}
+          onMouseUp={checkSelection}
+          onKeyUp={checkSelection}
+          onTouchEnd={checkSelection}
+          onFocus={checkSelection}
+          onBlur={() => {
+            setTimeout(checkSelection, 100);
+          }}
+          className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-indigo-500 focus:ring-0 dark:bg-gray-700 dark:text-white transition-colors resize-none"
           placeholder={placeholder}
+          rows={4}
+          required
+          style={{ 
+            whiteSpace: 'pre-wrap', 
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            lineHeight: '1.5'
+          }}
         />
         
         {/* プレビュー */}
