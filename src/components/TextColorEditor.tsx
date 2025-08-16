@@ -15,7 +15,7 @@ const MemoizedTextarea = memo(function MemoizedTextarea({
   checkSelection, 
   placeholder 
 }: {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   handleTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   checkSelection: () => void;
   placeholder: string;
