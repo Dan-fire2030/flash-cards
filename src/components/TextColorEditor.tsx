@@ -23,6 +23,7 @@ const MemoizedTextarea = memo(function MemoizedTextarea({
   const handleChangeWithPreservation = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     // 変更時のカーソル位置とスクロール位置を保存
     const target = e.target as HTMLTextAreaElement;
+    const currentValue = target.value;
     const selectionStart = target.selectionStart;
     const selectionEnd = target.selectionEnd;
     const scrollTop = target.scrollTop;
@@ -30,9 +31,13 @@ const MemoizedTextarea = memo(function MemoizedTextarea({
     
     handleTextChange(e);
     
-    // DOM状態を次のフレームで復元
+    // DOM状態を次のフレームで復元（値も含めて）
     requestAnimationFrame(() => {
       if (target && document.contains(target)) {
+        // Reactの再レンダリングで値が変わる場合があるので、値を復元
+        if (target.value !== currentValue) {
+          target.value = currentValue;
+        }
         target.setSelectionRange(selectionStart, selectionEnd);
         target.scrollTop = scrollTop;
         target.scrollLeft = scrollLeft;
@@ -108,6 +113,7 @@ export default function TextColorEditor({
       // テキストエリアに直接値を設定（Reactは関与せず）
       if (textareaRef.current) {
         textareaRef.current.value = plainText;
+        textareaRef.current.dataset.prevValue = plainText;
       }
     }
   }, [text, isClient]);
@@ -122,6 +128,7 @@ export default function TextColorEditor({
     // テキストエリアに直接値を設定（改行保持）
     if (textareaRef.current) {
       textareaRef.current.value = plain;
+      textareaRef.current.dataset.prevValue = plain;
     }
 
     const ranges: Array<{ start: number; end: number; color: string }> = [];
@@ -293,18 +300,56 @@ export default function TextColorEditor({
 
   const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
+    const oldText = textareaRef.current?.dataset.prevValue || "";
     
+    // テキストの差分を計算して範囲を調整
     if (coloredRanges.length > 0) {
-      // 色情報がある場合は範囲を調整
-      const adjustedRanges = coloredRanges.filter(range => 
-        range.start < newText.length && range.end <= newText.length
-      );
-      setColoredRanges(adjustedRanges);
+      const lengthDiff = newText.length - oldText.length;
+      let changeIndex = 0;
       
+      // 変更位置を特定
+      for (let i = 0; i < Math.min(oldText.length, newText.length); i++) {
+        if (oldText[i] !== newText[i]) {
+          changeIndex = i;
+          break;
+        }
+      }
+      
+      // 範囲を調整
+      const adjustedRanges = coloredRanges.map(range => {
+        if (range.end <= changeIndex) {
+          // 変更位置より前の範囲はそのまま
+          return range;
+        } else if (range.start >= changeIndex) {
+          // 変更位置より後の範囲は位置をシフト
+          return {
+            ...range,
+            start: range.start + lengthDiff,
+            end: range.end + lengthDiff
+          };
+        } else {
+          // 変更位置を含む範囲は調整
+          return {
+            ...range,
+            end: range.end + lengthDiff
+          };
+        }
+      }).filter(range => 
+        range.start >= 0 && 
+        range.end > range.start && 
+        range.end <= newText.length
+      );
+      
+      setColoredRanges(adjustedRanges);
       const html = generateHtml(newText, adjustedRanges);
       onChange(html);
     } else {
       onChange(newText);
+    }
+    
+    // 次回の比較のために現在の値を保存
+    if (textareaRef.current) {
+      textareaRef.current.dataset.prevValue = newText;
     }
   }, [coloredRanges, onChange]);
 
