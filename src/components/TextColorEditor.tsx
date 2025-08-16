@@ -43,8 +43,17 @@ export default function TextColorEditor({
       parseHtmlToRanges(text);
     } else {
       const newPlainText = text || "";
+      
+      // まず状態を更新
       setPlainText(newPlainText);
       setColoredRanges([]);
+      
+      // その後DOMを同期（改行保持のため）
+      if (textareaRef.current && textareaRef.current.value !== newPlainText) {
+        const savedScrollTop = textareaRef.current.scrollTop;
+        textareaRef.current.value = newPlainText;
+        textareaRef.current.scrollTop = savedScrollTop;
+      }
     }
   }, [text, isClient]);
 
@@ -54,7 +63,20 @@ export default function TextColorEditor({
     const div = document.createElement("div");
     div.innerHTML = html;
     const plain = div.textContent || "";
+    
+    // 状態を更新
     setPlainText(plain);
+
+    // DOMも同期（改行保持のため）
+    if (textareaRef.current && textareaRef.current.value !== plain) {
+      const savedScrollTop = textareaRef.current.scrollTop;
+      const savedSelectionStart = textareaRef.current.selectionStart;
+      const savedSelectionEnd = textareaRef.current.selectionEnd;
+      
+      textareaRef.current.value = plain;
+      textareaRef.current.scrollTop = savedScrollTop;
+      textareaRef.current.setSelectionRange(savedSelectionStart, savedSelectionEnd);
+    }
 
     const ranges: Array<{ start: number; end: number; color: string }> = [];
     let currentIndex = 0;
@@ -136,8 +158,9 @@ export default function TextColorEditor({
     
     if (start === end) return;
 
-    // 現在のテキストエリアの値を取得（改行を確実に保持）
+    // 現在のテキストエリアの値を保存（改行を確実に保持）
     const currentText = textareaRef.current?.value || plainText;
+    const savedScrollTop = textareaRef.current?.scrollTop || 0;
 
     const newRange = { start, end, color };
     
@@ -159,13 +182,23 @@ export default function TextColorEditor({
     updatedRanges.push(newRange);
     updatedRanges.sort((a, b) => a.start - b.start);
     
-    // 重要：状態を同期的に更新
-    setPlainText(currentText);
-    setColoredRanges(updatedRanges);
-    
-    // HTMLを生成（改行を維持）
-    const html = generateHtml(currentText, updatedRanges);
-    onChange(html);
+    // 状態更新を後で実行し、DOMを先に修正
+    setTimeout(() => {
+      setPlainText(currentText);
+      setColoredRanges(updatedRanges);
+      
+      // HTMLを生成（改行を維持）
+      const html = generateHtml(currentText, updatedRanges);
+      onChange(html);
+      
+      // テキストエリアの状態を復元
+      if (textareaRef.current) {
+        textareaRef.current.value = currentText;
+        textareaRef.current.scrollTop = savedScrollTop;
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(end, end);
+      }
+    }, 0);
     
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
