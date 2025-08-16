@@ -45,11 +45,6 @@ export default function TextColorEditor({
       const newPlainText = text || "";
       setPlainText(newPlainText);
       setColoredRanges([]);
-      
-      // テキストエリアの値も同期
-      if (textareaRef.current && textareaRef.current.value !== newPlainText) {
-        textareaRef.current.value = newPlainText;
-      }
     }
   }, [text, isClient]);
 
@@ -60,11 +55,6 @@ export default function TextColorEditor({
     div.innerHTML = html;
     const plain = div.textContent || "";
     setPlainText(plain);
-
-    // テキストエリアの値も同期
-    if (textareaRef.current && textareaRef.current.value !== plain) {
-      textareaRef.current.value = plain;
-    }
 
     const ranges: Array<{ start: number; end: number; color: string }> = [];
     let currentIndex = 0;
@@ -148,9 +138,6 @@ export default function TextColorEditor({
 
     // 現在のテキストエリアの値を取得（改行を確実に保持）
     const currentText = textareaRef.current?.value || plainText;
-    
-    // プレーンテキストの状態を更新
-    setPlainText(currentText);
 
     const newRange = { start, end, color };
     
@@ -171,6 +158,9 @@ export default function TextColorEditor({
     
     updatedRanges.push(newRange);
     updatedRanges.sort((a, b) => a.start - b.start);
+    
+    // 重要：状態を同期的に更新
+    setPlainText(currentText);
     setColoredRanges(updatedRanges);
     
     // HTMLを生成（改行を維持）
@@ -179,14 +169,6 @@ export default function TextColorEditor({
     
     setHasSelection(false);
     setSelectionRange({ start: 0, end: 0 });
-    
-    // フォーカスとカーソル位置を適切に設定
-    requestAnimationFrame(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(end, end);
-      }
-    });
   };
 
   const generateHtml = (text: string, ranges: Array<{ start: number; end: number; color: string }>) => {
@@ -223,15 +205,12 @@ export default function TextColorEditor({
   const clearFormatting = () => {
     setColoredRanges([]);
     onChange(plainText);
-    
-    // テキストエリアも確実に更新
-    if (textareaRef.current) {
-      textareaRef.current.value = plainText;
-    }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
+    
+    // テキストを即座に状態に反映
     setPlainText(newText);
     
     if (coloredRanges.length > 0) {
@@ -366,7 +345,12 @@ export default function TextColorEditor({
           placeholder={placeholder}
           rows={4}
           required
-          style={{ whiteSpace: 'pre-wrap' }}
+          style={{ 
+            whiteSpace: 'pre-wrap', 
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word',
+            lineHeight: '1.5'
+          }}
         />
         
         {/* プレビュー */}
