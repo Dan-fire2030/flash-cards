@@ -55,6 +55,8 @@ export default function LoginForm() {
 
     try {
       await signInWithGoogle()
+      // signInWithGoogleはリダイレクトするので、ここには到達しない
+      // ローディング状態は維持したまま
     } catch (error: unknown) {
       setError((error as Error)?.message || 'Googleログインに失敗しました')
       setLoading(false)

@@ -36,9 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       setLoading(false)
       
-      // SIGNED_OUTの場合のみログイン画面にリダイレクト
-      // SIGNED_INでは自動リダイレクトを行わない（画面から離れた時の自動リダイレクトを防ぐため）
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_IN') {
+        // ログインページまたは認証コールバックページから来た場合のみホームへリダイレクト
+        const currentPath = window.location.pathname
+        if (currentPath === '/login' || currentPath === '/auth/callback' || currentPath.includes('/login#')) {
+          console.log('User signed in, redirecting to home...')
+          router.push('/')
+        }
+      } else if (event === 'SIGNED_OUT') {
         console.log('User signed out, redirecting to login...')
         router.push('/login')
       }
