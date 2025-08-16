@@ -133,6 +133,12 @@ export default function TextColorEditor({
     
     if (start === end) return;
 
+    // 現在のテキストエリアの実際の値を使用（改行を確実に保持）
+    const currentText = textareaRef.current?.value || plainText;
+    
+    // プレーンテキストを更新
+    setPlainText(currentText);
+
     // 既存の範囲と新しい範囲をマージ
     const newRange = { start, end, color: colors[selectedColor].color };
     
@@ -157,8 +163,8 @@ export default function TextColorEditor({
     updatedRanges.sort((a, b) => a.start - b.start);
     setColoredRanges(updatedRanges);
     
-    // HTMLを生成
-    const html = generateHtml(plainText, updatedRanges);
+    // HTMLを生成（現在のテキストを使用）
+    const html = generateHtml(currentText, updatedRanges);
     onChange(html);
     
     // 選択を解除
@@ -218,11 +224,30 @@ export default function TextColorEditor({
       const adjustedRanges = coloredRanges.filter(range => 
         range.start < newText.length && range.end <= newText.length
       );
-      setColoredRanges(adjustedRanges);
       
-      // 色情報を含むHTMLを生成
-      const html = generateHtml(newText, adjustedRanges);
-      onChange(html);
+      // さらに、改行数の変化を考慮して範囲を調整
+      const oldLineCount = (plainText.match(/\n/g) || []).length;
+      const newLineCount = (newText.match(/\n/g) || []).length;
+      
+      if (oldLineCount !== newLineCount) {
+        // 改行数が変わった場合は範囲をより慎重に調整
+        const finalRanges = adjustedRanges.filter(range => {
+          const beforeText = newText.substring(0, range.start);
+          const selectedText = newText.substring(range.start, range.end);
+          return beforeText.length === range.start && selectedText.length === (range.end - range.start);
+        });
+        setColoredRanges(finalRanges);
+        
+        // 色情報を含むHTMLを生成
+        const html = generateHtml(newText, finalRanges);
+        onChange(html);
+      } else {
+        setColoredRanges(adjustedRanges);
+        
+        // 色情報を含むHTMLを生成
+        const html = generateHtml(newText, adjustedRanges);
+        onChange(html);
+      }
     } else {
       // 色情報がない場合は通常のテキストとして処理
       onChange(newText);
