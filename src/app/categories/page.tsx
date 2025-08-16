@@ -15,6 +15,8 @@ export default function CategoriesPage() {
   const [draggedCategory, setDraggedCategory] = useState<Category | null>(null);
   const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [movingCategory, setMovingCategory] = useState<Category | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   
   // オフライン対応
   const { isOnline } = useOffline();
@@ -25,6 +27,16 @@ export default function CategoriesPage() {
 
   // カテゴリーの階層構造処理
   const [hierarchicalCategories, setHierarchicalCategories] = useState<Category[]>([]);
+
+  // モバイル検出
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // カード数を集計
@@ -146,6 +158,55 @@ export default function CategoriesPage() {
     setDragOverCategory(null);
   };
 
+  // モバイル用の移動処理
+  const handleMobileMove = async (targetCategoryId: string | null) => {
+    if (!movingCategory || movingCategory.id === targetCategoryId) return;
+
+    // 循環参照チェック
+    if (targetCategoryId) {
+      const isDescendant = (catId: string, parentId: string): boolean => {
+        const findChildren = (id: string): string[] => {
+          const children: string[] = [];
+          const addChildren = (parentId: string) => {
+            categories.forEach(cat => {
+              if (cat.parent_id === parentId) {
+                children.push(cat.id);
+                if (cat.children) {
+                  cat.children.forEach(child => addChildren(child.id));
+                }
+              }
+            });
+          };
+          addChildren(id);
+          return children;
+        };
+        
+        const descendants = findChildren(catId);
+        return descendants.includes(parentId);
+      };
+
+      if (isDescendant(movingCategory.id, targetCategoryId)) {
+        alert('子カテゴリを親カテゴリに移動することはできません');
+        return;
+      }
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ parent_id: targetCategoryId })
+        .eq('id', movingCategory.id);
+
+      if (error) throw error;
+      
+      setMovingCategory(null);
+      refetch();
+    } catch (error) {
+      console.error('Error updating category:', error);
+      alert('カテゴリの移動に失敗しました');
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent, targetCategoryId: string | null) => {
     e.preventDefault();
     setDragOverCategory(null);
@@ -203,18 +264,40 @@ export default function CategoriesPage() {
         <div 
           className={`group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden ${
             dragOverCategory === category.id ? 'ring-2 ring-purple-500' : ''
-          } ${editMode ? 'cursor-move' : ''}`}
-          style={{ marginLeft: `${level * 24}px` }}
-          draggable={editMode}
-          onDragStart={editMode ? (e) => handleDragStart(e, category) : undefined}
-          onDragOver={editMode ? (e) => handleDragOver(e, category.id) : undefined}
-          onDragLeave={editMode ? handleDragLeave : undefined}
-          onDrop={editMode ? (e) => handleDrop(e, category.id) : undefined}
+          } ${movingCategory?.id === category.id ? 'ring-2 ring-indigo-500 scale-[1.02]' : ''} ${
+            editMode && !isMobile ? 'cursor-move' : ''
+          }`}
+          style={{ marginLeft: `${level * (isMobile ? 16 : 24)}px` }}
+          draggable={editMode && !isMobile}
+          onDragStart={editMode && !isMobile ? (e) => handleDragStart(e, category) : undefined}
+          onDragOver={editMode && !isMobile ? (e) => handleDragOver(e, category.id) : undefined}
+          onDragLeave={editMode && !isMobile ? handleDragLeave : undefined}
+          onDrop={editMode && !isMobile ? (e) => handleDrop(e, category.id) : undefined}
         >
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {editMode && (
+              <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                {editMode && isMobile && (
+                  <button
+                    onClick={() => {
+                      if (movingCategory?.id === category.id) {
+                        setMovingCategory(null);
+                      } else {
+                        setMovingCategory(category);
+                      }
+                    }}
+                    className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
+                      movingCategory?.id === category.id
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </button>
+                )}
+                {editMode && !isMobile && (
                   <div className="flex items-center text-gray-400 dark:text-gray-600">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
@@ -252,6 +335,19 @@ export default function CategoriesPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* モバイル時の移動先ボタン */}
+              {editMode && isMobile && movingCategory && movingCategory.id !== category.id && (
+                <button
+                  onClick={() => handleMobileMove(category.id)}
+                  className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg mr-2"
+                  title="ここに移動"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
               
               <div className="flex items-center gap-2">
                 <Link
@@ -395,10 +491,19 @@ export default function CategoriesPage() {
             </div>
             <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm mt-3">
               {editMode 
-                ? 'カテゴリをドラッグ&ドロップして階層を変更できます。'
+                ? isMobile 
+                  ? '移動ボタンをタップして移動元を選択し、移動先をタップしてください。'
+                  : 'カテゴリをドラッグ&ドロップして階層を変更できます。'
                 : 'カテゴリをクリックすると詳細が表示されます。'
               }
             </p>
+            {editMode && isMobile && movingCategory && (
+              <div className="mt-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                  移動中: <span className="font-medium">{movingCategory.name}</span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -451,20 +556,34 @@ export default function CategoriesPage() {
             <div className="lg:col-span-2">
               {/* ルートレベルドロップゾーン（編集モード時のみ表示） */}
               {editMode && (
-                <div 
-                  className={`border-2 border-dashed rounded-xl p-4 mb-4 transition-colors ${
-                    dragOverCategory === 'root' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOverCategory('root');
-                  }}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, null)}
-                >
-                  <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                    ここにドロップしてルートカテゴリにする
-                  </p>
+                <div>
+                  {isMobile && movingCategory && (
+                    <button
+                      onClick={() => handleMobileMove(null)}
+                      className="w-full border-2 border-dashed border-purple-500 bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 mb-4 transition-colors"
+                    >
+                      <p className="text-center text-sm text-purple-600 dark:text-purple-400 font-medium">
+                        タップしてルートカテゴリに移動
+                      </p>
+                    </button>
+                  )}
+                  {!isMobile && (
+                    <div 
+                      className={`border-2 border-dashed rounded-xl p-4 mb-4 transition-colors ${
+                        dragOverCategory === 'root' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverCategory('root');
+                      }}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, null)}
+                    >
+                      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                        ここにドロップしてルートカテゴリにする
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
               
