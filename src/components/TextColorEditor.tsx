@@ -206,7 +206,7 @@ export default function TextColorEditor({
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;")
-      .replace(/\n/g, "<br>");
+      .replace(/\n/g, "<br/>");
   };
 
   const clearFormatting = () => {
@@ -262,7 +262,10 @@ export default function TextColorEditor({
     return (
       <div 
         dangerouslySetInnerHTML={{ __html: html }}
-        style={{ whiteSpace: 'pre-wrap' }}
+        style={{ 
+          lineHeight: '1.5',
+          wordBreak: 'break-word'
+        }}
       />
     );
   };
