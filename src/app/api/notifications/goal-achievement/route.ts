@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     let title = "目標達成おめでとうございます！";
-    let body = customMessage || "学習目標を達成しました！";
-    let notificationData: Record<string, any> = {
+    let notificationBody = customMessage || "学習目標を達成しました！";
+    let notificationData: Record<string, unknown> = {
       url: "/stats",
       goalType,
       achievedAt: new Date().toISOString(),
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         const cardsStudied = todaySession?.total_cards_studied || 0;
         const dailyGoal = settings.daily_goal_cards || 10;
         title = "今日のカード目標達成！";
-        body = `今日は${cardsStudied}枚のカードを学習し、目標の${dailyGoal}枚を達成しました！`;
+        notificationBody = `今日は${cardsStudied}枚のカードを学習し、目標の${dailyGoal}枚を達成しました！`;
         notificationData = {
           ...notificationData,
           cardsStudied,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         const accuracy = todaySession?.average_accuracy || 0;
         const accuracyGoal = settings.accuracy_goal_percentage || 80;
         title = "正答率目標達成！";
-        body = `今日の正答率は${Math.round(accuracy)}%で、目標の${accuracyGoal}%を達成しました！`;
+        notificationBody = `今日の正答率は${Math.round(accuracy)}%で、目標の${accuracyGoal}%を達成しました！`;
         notificationData = {
           ...notificationData,
           accuracy: Math.round(accuracy),
@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
       case "streak":
         // 連続学習日数の計算（実装が必要）
         title = "連続学習記録更新！";
-        body = customMessage || "連続して学習を続けています。素晴らしいです！";
+        notificationBody =
+          customMessage || "連続して学習を続けています。素晴らしいです！";
         break;
 
       case "weekly_goal":
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
 
         if (studyDaysThisWeek >= weeklyGoal) {
           title = "週間学習目標達成！";
-          body = `今週は${studyDaysThisWeek}日学習し、目標の${weeklyGoal}日を達成しました！`;
+          notificationBody = `今週は${studyDaysThisWeek}日学習し、目標の${weeklyGoal}日を達成しました！`;
           notificationData = {
             ...notificationData,
             studyDaysThisWeek,
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
         body: {
           userId: user.id,
           title,
-          body,
+          body: notificationBody,
           type: "goal",
           data: notificationData,
         },

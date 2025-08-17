@@ -12,7 +12,7 @@ interface SendNotificationRequest {
     | "goal"
     | "streak"
     | "weekly_summary";
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   scheduleFor?: string; // ISO date string for scheduled notifications
 }
 

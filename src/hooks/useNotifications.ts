@@ -291,91 +291,6 @@ export function useNotifications() {
     [settings, useLocalStorage],
   );
 
-  // テスト通知を送信
-  const sendTestNotification = useCallback(async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        console.error("User not authenticated");
-        return false;
-      }
-
-      const response = await fetch("/api/notifications/test", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const result = await response.json();
-      return result.success;
-    } catch (error) {
-      console.error("Error sending test notification:", error);
-      return false;
-    }
-  }, []);
-
-  // 学習リマインダー通知を送信
-  const sendStudyReminder = useCallback(async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        console.error("User not authenticated");
-        return false;
-      }
-
-      const response = await fetch("/api/notifications/study-reminder", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const result = await response.json();
-      return result.success;
-    } catch (error) {
-      console.error("Error sending study reminder:", error);
-      return false;
-    }
-  }, []);
-
-  // 目標達成通知を送信
-  const sendGoalAchievement = useCallback(
-    async (goalType: string, value: number) => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session) {
-          console.error("User not authenticated");
-          return false;
-        }
-
-        const response = await fetch("/api/notifications/goal-achievement", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ goalType, value }),
-        });
-
-        const result = await response.json();
-        return result.success;
-      } catch (error) {
-        console.error("Error sending goal achievement:", error);
-        return false;
-      }
-    },
-    [],
-  );
-
   // 既存のFCMトークンを取得
   const loadFcmToken = useCallback(async () => {
     try {
@@ -591,7 +506,7 @@ export function useNotifications() {
       title: string,
       body: string,
       type: string,
-      data?: Record<string, any>,
+      data?: Record<string, unknown>,
     ) => {
       try {
         const {
