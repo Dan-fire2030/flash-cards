@@ -1,9 +1,8 @@
-// Firebase Cloud Messaging Service Worker
+// Firebase Messaging Service Worker
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
-
-// Firebase設定
+// Firebase 設定
 const firebaseConfig = {
   apiKey: "AIzaSyAfTRyRzKF6y062eqyIWuzZij6SZRKHIlg",
   authDomain: "flash-cards-app-7eff2.firebaseapp.com",
@@ -15,163 +14,275 @@ const firebaseConfig = {
 
 // Firebase初期化
 firebase.initializeApp(firebaseConfig);
-
-// メッセージングインスタンス
 const messaging = firebase.messaging();
 
-// バックグラウンドメッセージ処理
-messaging.onBackgroundMessage(function(payload) {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+// バックグラウンド通知の処理
+messaging.onBackgroundMessage((payload) => {
+  console.log('Background message received:', payload);
   
-  const notificationTitle = payload.notification?.title || 'フラッシュカード';
-  const notificationOptions = {
-    body: payload.notification?.body || 'フラッシュカードで学習しましょう！',
+  const { notification, data } = payload;
+  
+  if (!notification) {
+    console.log('No notification data found');
+    return;
+  }
+  
+  // 通知タイプに応じたカスタマイズ
+  const notificationType = data?.type || 'default';
+  let notificationOptions = {
+    body: notification.body,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-96x96.png',
-    vibrate: [200, 100, 200],
+    tag: notificationType,
+    data: data || {},
     requireInteraction: false,
     silent: false,
-    tag: payload.data?.type || 'flashcard-notification',
-    data: {
-      url: payload.data?.url || '/',
-      type: payload.data?.type || 'reminder',
-      timestamp: Date.now(),
-      ...payload.data
-    },
-    actions: [
-      {
-        action: 'study',
-        title: '学習開始',
-        icon: '/icons/icon-96x96.png'
-      },
-      {
-        action: 'dismiss',
-        title: '後で',
-        icon: '/icons/icon-96x96.png'
-      }
-    ]
   };
-
-  // 通知タイプに応じてカスタマイズ
-  if (payload.data?.type === 'goal_achievement') {
-    notificationOptions.requireInteraction = true;
-    notificationOptions.actions = [
-      {
-        action: 'view_stats',
-        title: '統計を見る',
-        icon: '/icons/icon-96x96.png'
-      },
-      {
-        action: 'continue_study',
-        title: '学習継続',
-        icon: '/icons/icon-96x96.png'
-      }
-    ];
-  } else if (payload.data?.type === 'weekly_summary') {
-    notificationOptions.requireInteraction = true;
-    notificationOptions.actions = [
-      {
-        action: 'view_summary',
-        title: '詳細を見る',
-        icon: '/icons/icon-96x96.png'
-      },
-      {
-        action: 'study',
-        title: '学習開始',
-        icon: '/icons/icon-96x96.png'
-      }
-    ];
+  
+  // 通知タイプ別のカスタマイズ
+  switch (notificationType) {
+    case 'study_reminder':
+      notificationOptions = {
+        ...notificationOptions,
+        actions: [
+          {
+            action: 'study_now',
+            title: '今すぐ学習',
+            icon: '/icons/study.png'
+          },
+          {
+            action: 'remind_later',
+            title: '後で通知',
+            icon: '/icons/clock.png'
+          }
+        ],
+        requireInteraction: true,
+        vibrate: [200, 100, 200]
+      };
+      break;
+      
+    case 'goal_achievement':
+      notificationOptions = {
+        ...notificationOptions,
+        actions: [
+          {
+            action: 'view_stats',
+            title: '統計を見る',
+            icon: '/icons/stats.png'
+          },
+          {
+            action: 'continue_study',
+            title: '学習を続ける',
+            icon: '/icons/continue.png'
+          }
+        ],
+        vibrate: [300, 200, 300, 200, 300]
+      };
+      break;
+      
+    case 'streak':
+      notificationOptions = {
+        ...notificationOptions,
+        actions: [
+          {
+            action: 'view_progress',
+            title: '進捗を見る',
+            icon: '/icons/progress.png'
+          }
+        ],
+        vibrate: [100, 50, 100, 50, 100]
+      };
+      break;
+      
+    case 'weekly_summary':
+      notificationOptions = {
+        ...notificationOptions,
+        actions: [
+          {
+            action: 'view_summary',
+            title: '詳細を見る',
+            icon: '/icons/summary.png'
+          }
+        ]
+      };
+      break;
   }
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  
+  // 通知を表示
+  return self.registration.showNotification(
+    notification.title,
+    notificationOptions
+  );
 });
 
-// 通知クリック処理
-self.addEventListener('notificationclick', function(event) {
-  console.log('[firebase-messaging-sw.js] Notification click received.');
-  console.log('Action:', event.action);
-  console.log('Notification data:', event.notification.data);
+// 通知クリック時の処理
+self.addEventListener('notificationclick', (event) => {
+  console.log('Notification clicked:', event);
   
   event.notification.close();
   
-  let url = '/';
-  if (event.notification.data && event.notification.data.url) {
-    url = event.notification.data.url;
-  }
+  const { action, data } = event;
+  const notificationType = event.notification.tag;
   
-  // アクションに応じた処理
-  switch (event.action) {
-    case 'study':
+  let url = '/';
+  
+  // アクション別の処理
+  switch (action) {
+    case 'study_now':
       url = '/study';
       break;
+    case 'remind_later':
+      // 30分後に再通知（実装例）
+      scheduleReminder(30);
+      return;
     case 'view_stats':
-      url = '/stats';
-      break;
-    case 'view_summary':
       url = '/stats';
       break;
     case 'continue_study':
       url = '/study';
       break;
-    case 'dismiss':
-      // 分析用にクリックイベントを記録
-      logNotificationAction('dismiss', event.notification.data);
-      return;
+    case 'view_progress':
+      url = '/stats';
+      break;
+    case 'view_summary':
+      url = '/stats';
+      break;
     default:
-      // デフォルトは本文クリック
-      if (event.notification.data?.type === 'goal_achievement') {
-        url = '/stats';
-      } else if (event.notification.data?.type === 'weekly_summary') {
-        url = '/stats';
-      } else {
-        url = event.notification.data?.url || '/study';
+      // 通知タイプ別のデフォルトURL
+      switch (notificationType) {
+        case 'study_reminder':
+          url = '/study';
+          break;
+        case 'goal_achievement':
+        case 'streak':
+        case 'weekly_summary':
+          url = '/stats';
+          break;
+        default:
+          url = '/';
       }
   }
   
-  // 分析用にクリックイベントを記録
-  logNotificationAction(event.action || 'click', event.notification.data);
-  
+  // アプリを開く
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-      // 既にアプリが開いている場合
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.postMessage({
-            type: 'NOTIFICATION_CLICK',
-            action: event.action,
-            url: url,
-            data: event.notification.data
-          });
-          return client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // 既に開いているタブがある場合はそこにフォーカス
+        for (let client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(url);
+            return client.focus();
+          }
         }
-      }
-      
-      // 新しいタブ/ウィンドウを開く
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
-    })
+        
+        // 新しいタブを開く
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+      })
   );
 });
 
-// 通知アクションのログ記録
-function logNotificationAction(action, notificationData) {
-  console.log('[firebase-messaging-sw.js] Notification action:', action, notificationData);
+// 通知を閉じた時の処理
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification closed:', event.notification.tag);
   
-  // IndexedDBまたはローカルストレージに保存することで、
-  // 後でアプリ側で分析データとして活用可能
+  // 分析データを送信（オプション）
+  const data = {
+    type: 'notification_closed',
+    notificationType: event.notification.tag,
+    timestamp: new Date().toISOString()
+  };
+  
+  // IndexedDBまたはサーバーに分析データを保存
+  saveAnalyticsData(data);
+});
+
+// リマインダーのスケジューリング
+function scheduleReminder(minutes) {
+  const delay = minutes * 60 * 1000;
+  
+  setTimeout(() => {
+    self.registration.showNotification('学習リマインダー', {
+      body: '学習の時間です！',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-96x96.png',
+      tag: 'study_reminder_delayed',
+      actions: [
+        {
+          action: 'study_now',
+          title: '今すぐ学習'
+        }
+      ]
+    });
+  }, delay);
+}
+
+// 分析データの保存
+function saveAnalyticsData(data) {
   try {
-    const actionData = {
-      action: action,
-      type: notificationData?.type,
-      timestamp: Date.now(),
-      url: notificationData?.url
+    // IndexedDBに保存
+    const request = indexedDB.open('NotificationAnalytics', 1);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('events')) {
+        db.createObjectStore('events', { keyPath: 'id', autoIncrement: true });
+      }
     };
     
-    // ServiceWorkerからは直接fetch APIでサーバーに送信することも可能
-    // ここでは簡単な例として console.log のみ
-    console.log('Notification action logged:', actionData);
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction(['events'], 'readwrite');
+      const store = transaction.objectStore('events');
+      store.add({
+        ...data,
+        id: Date.now() + Math.random()
+      });
+    };
   } catch (error) {
-    console.error('Error logging notification action:', error);
+    console.error('Error saving analytics data:', error);
   }
 }
+
+// Push イベントの処理（FCM以外の通知用）
+self.addEventListener('push', (event) => {
+  console.log('Push event received:', event);
+  
+  if (!event.data) {
+    console.log('No push data');
+    return;
+  }
+  
+  try {
+    const data = event.data.json();
+    console.log('Push data:', data);
+    
+    const { title, body, icon, badge, tag, actions, ...options } = data;
+    
+    const notificationOptions = {
+      body,
+      icon: icon || '/icons/icon-192x192.png',
+      badge: badge || '/icons/icon-96x96.png',
+      tag: tag || 'push_notification',
+      actions: actions || [],
+      data: options.data || {},
+      ...options
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(title, notificationOptions)
+    );
+  } catch (error) {
+    console.error('Error processing push event:', error);
+  }
+});
+
+// Service Workerの更新処理
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+console.log('Firebase Messaging Service Worker loaded');

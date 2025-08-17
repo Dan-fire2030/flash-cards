@@ -44,18 +44,45 @@ export default function NotificationSettingsPage() {
   };
 
   const handleTestNotification = async () => {
-    const result = await sendTestNotification();
-    alert(result.message);
+    try {
+      const result = await sendTestNotification();
+      if (result.success) {
+        alert('✅ ' + result.message);
+      } else {
+        alert('❌ ' + result.message);
+      }
+    } catch (error) {
+      console.error('Test notification error:', error);
+      alert('❌ 通知の送信中にエラーが発生しました');
+    }
   };
 
   const handleStudyReminder = async () => {
-    const result = await sendStudyReminder();
-    alert(result.message);
+    try {
+      const result = await sendStudyReminder();
+      if (result.success) {
+        alert('✅ ' + result.message);
+      } else {
+        alert('❌ ' + result.message);
+      }
+    } catch (error) {
+      console.error('Study reminder error:', error);
+      alert('❌ 学習リマインダーの送信中にエラーが発生しました');
+    }
   };
 
   const handleGoalNotification = async (goalType: string) => {
-    const result = await sendGoalNotification(goalType);
-    alert(result.message);
+    try {
+      const result = await sendGoalNotification(goalType, '目標達成テスト通知です！');
+      if (result.success) {
+        alert('✅ ' + result.message);
+      } else {
+        alert('❌ ' + result.message);
+      }
+    } catch (error) {
+      console.error('Goal notification error:', error);
+      alert('❌ 目標達成通知の送信中にエラーが発生しました');
+    }
   };
 
 
