@@ -291,6 +291,91 @@ export function useNotifications() {
     [settings, useLocalStorage],
   );
 
+  // テスト通知を送信
+  const sendTestNotification = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User not authenticated");
+        return false;
+      }
+
+      const response = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error("Error sending test notification:", error);
+      return false;
+    }
+  }, []);
+
+  // 学習リマインダー通知を送信
+  const sendStudyReminder = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("User not authenticated");
+        return false;
+      }
+
+      const response = await fetch("/api/notifications/study-reminder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error("Error sending study reminder:", error);
+      return false;
+    }
+  }, []);
+
+  // 目標達成通知を送信
+  const sendGoalAchievement = useCallback(
+    async (goalType: string, value: number) => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          console.error("User not authenticated");
+          return false;
+        }
+
+        const response = await fetch("/api/notifications/goal-achievement", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ goalType, value }),
+        });
+
+        const result = await response.json();
+        return result.success;
+      } catch (error) {
+        console.error("Error sending goal achievement:", error);
+        return false;
+      }
+    },
+    [],
+  );
+
   // 既存のFCMトークンを取得
   const loadFcmToken = useCallback(async () => {
     try {
@@ -372,6 +457,208 @@ export function useNotifications() {
     loadFcmToken();
   }, []);
 
+  // テスト通知を送信
+  const sendTestNotification = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("ログインが必要です");
+      }
+
+      const response = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "通知の送信に失敗しました");
+      }
+
+      return { success: true, message: "テスト通知を送信しました！" };
+    } catch (error) {
+      console.error("Error sending test notification:", error);
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "通知の送信中にエラーが発生しました",
+      };
+    }
+  }, []);
+
+  // 学習リマインダーを送信
+  const sendStudyReminder = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("ログインが必要です");
+      }
+
+      const response = await fetch("/api/notifications/study-reminder", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(
+          result.message || "学習リマインダーの送信に失敗しました",
+        );
+      }
+
+      return {
+        success: true,
+        message: "学習リマインダーを送信しました！",
+        data: result.data,
+      };
+    } catch (error) {
+      console.error("Error sending study reminder:", error);
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "学習リマインダーの送信中にエラーが発生しました",
+      };
+    }
+  }, []);
+
+  // 目標達成通知を送信
+  const sendGoalNotification = useCallback(
+    async (goalType: string, customMessage?: string) => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          throw new Error("ログインが必要です");
+        }
+
+        const response = await fetch("/api/notifications/goal-achievement", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ goalType, customMessage }),
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "目標達成通知の送信に失敗しました");
+        }
+
+        return {
+          success: true,
+          message: "目標達成通知を送信しました！",
+          data: result.data,
+        };
+      } catch (error) {
+        console.error("Error sending goal notification:", error);
+        return {
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "目標達成通知の送信中にエラーが発生しました",
+        };
+      }
+    },
+    [],
+  );
+
+  // カスタム通知を送信
+  const sendCustomNotification = useCallback(
+    async (
+      title: string,
+      body: string,
+      type: string,
+      data?: Record<string, any>,
+    ) => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          throw new Error("ログインが必要です");
+        }
+
+        const response = await fetch("/api/notifications/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ title, body, type, data }),
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.message || "通知の送信に失敗しました");
+        }
+
+        return {
+          success: true,
+          message: "通知を送信しました！",
+          data: result.data,
+        };
+      } catch (error) {
+        console.error("Error sending custom notification:", error);
+        return {
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "通知の送信中にエラーが発生しました",
+        };
+      }
+    },
+    [],
+  );
+
+  // 通知履歴を取得
+  const getNotificationHistory = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from("notification_logs")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sent_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error loading notification history:", error);
+      return [];
+    }
+  }, []);
+
   return {
     settings,
     loading,
@@ -380,5 +667,10 @@ export function useNotifications() {
     requestPermission,
     saveSettings,
     checkPermission,
+    sendTestNotification,
+    sendStudyReminder,
+    sendGoalNotification,
+    sendCustomNotification,
+    getNotificationHistory,
   };
 }

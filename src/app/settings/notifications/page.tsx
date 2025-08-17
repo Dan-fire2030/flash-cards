@@ -26,6 +26,9 @@ export default function NotificationSettingsPage() {
     fcmToken,
     requestPermission,
     saveSettings,
+    sendTestNotification,
+    sendStudyReminder,
+    sendGoalNotification,
   } = useNotifications();
 
   const [saving, setSaving] = useState(false);
@@ -40,35 +43,19 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  const sendTestNotification = async () => {
-    try {
-      // Supabaseセッションを取得してAuthorizationヘッダーに追加
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        alert('ログインが必要です');
-        return;
-      }
+  const handleTestNotification = async () => {
+    const result = await sendTestNotification();
+    alert(result.message);
+  };
 
-      const response = await fetch('/api/notifications/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('テスト通知を送信しました！');
-      } else {
-        alert('通知の送信に失敗しました: ' + result.message);
-      }
-    } catch (error) {
-      console.error('Error sending test notification:', error);
-      alert('通知の送信中にエラーが発生しました');
-    }
+  const handleStudyReminder = async () => {
+    const result = await sendStudyReminder();
+    alert(result.message);
+  };
+
+  const handleGoalNotification = async (goalType: string) => {
+    const result = await sendGoalNotification(goalType);
+    alert(result.message);
   };
 
 
@@ -197,12 +184,20 @@ export default function NotificationSettingsPage() {
                       <p className="font-medium text-gray-900 dark:text-white">通知テスト</p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">テスト通知を送信して動作確認</p>
                     </div>
-                    <button
-                      onClick={sendTestNotification}
-                      className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
-                    >
-                      テスト送信
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={handleTestNotification}
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                      >
+                        テスト送信
+                      </button>
+                      <button
+                        onClick={handleStudyReminder}
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                      >
+                        学習リマインダー
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
